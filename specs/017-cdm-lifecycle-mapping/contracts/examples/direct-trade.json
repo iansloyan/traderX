@@ -1,0 +1,860 @@
+[ {
+  "proposedEvent" : {
+    "eventDate" : "2026-10-29",
+    "effectiveDate" : "2026-10-29",
+    "instruction" : [ {
+      "primitiveInstruction" : {
+        "execution" : {
+          "product" : {
+            "economicTerms" : {
+              "payout" : [ {
+                "SettlementPayout" : {
+                  "payerReceiver" : {
+                    "payer" : "Party1",
+                    "receiver" : "Party2"
+                  },
+                  "settlementTerms" : {
+                    "settlementType" : "Physical",
+                    "transferSettlementType" : "DeliveryVersusPayment",
+                    "settlementCurrency" : {
+                      "value" : "USD"
+                    },
+                    "settlementDate" : {
+                      "adjustableOrRelativeDate" : {
+                        "relativeDate" : {
+                          "periodMultiplier" : 2,
+                          "period" : "D",
+                          "meta" : {
+                            "globalKey" : "86f2e42c"
+                          },
+                          "dayType" : "Business",
+                          "businessDayConvention" : "NONE",
+                          "dateRelativeTo" : {
+                            "externalReference" : "tradeDate"
+                          }
+                        }
+                      },
+                      "meta" : {
+                        "globalKey" : "86f2e42c"
+                      }
+                    },
+                    "securitySettlementCentre" : "SecuritySettlementCentre",
+                    "cashSettlementCentre" : "CashSettlementCentre",
+                    "meta" : {
+                      "globalKey" : "e97011f0"
+                    }
+                  },
+                  "meta" : {
+                    "globalKey" : "64d382b4"
+                  },
+                  "underlier" : {
+                    "Observable" : {
+                      "value" : {
+                        "Asset" : {
+                          "Instrument" : {
+                            "Security" : {
+                              "identifier" : [ {
+                                "identifier" : {
+                                  "value" : "IBM"
+                                },
+                                "identifierType" : "ExchangeCode"
+                              }, {
+                                "identifier" : {
+                                  "value" : "XXIMQIJLGP45",
+                                  "meta" : {
+                                    "scheme" : "https://traderx.finos.org/demo-identifier"
+                                  }
+                                },
+                                "identifierType" : "ISIN"
+                              }, {
+                                "identifier" : {
+                                  "value" : "BBG821ZC5JC3",
+                                  "meta" : {
+                                    "scheme" : "https://traderx.finos.org/demo-identifier"
+                                  }
+                                },
+                                "identifierType" : "FIGI"
+                              }, {
+                                "identifier" : {
+                                  "value" : "International Business Machines"
+                                },
+                                "identifierType" : "Name"
+                              } ],
+                              "assetType" : "Security",
+                              "securityType" : "Equity",
+                              "equityType" : {
+                                "equityType" : "Ordinary"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              } ]
+            },
+            "meta" : {
+              "globalKey" : "64d382b4"
+            }
+          },
+          "priceQuantity" : [ {
+            "price" : [ {
+              "value" : {
+                "value" : 181.250,
+                "unit" : {
+                  "currency" : {
+                    "value" : "USD"
+                  }
+                },
+                "perUnitOf" : {
+                  "financialUnit" : "Share"
+                },
+                "priceType" : "AssetPrice",
+                "priceExpression" : "AbsoluteTerms",
+                "derivedQuantity" : {
+                  "value" : 36250.000,
+                  "unit" : {
+                    "currency" : {
+                      "value" : "USD"
+                    }
+                  }
+                }
+              }
+            } ],
+            "quantity" : {
+              "value" : {
+                "value" : 200,
+                "unit" : {
+                  "financialUnit" : "Share"
+                }
+              }
+            },
+            "meta" : {
+              "globalKey" : "6c96a038"
+            }
+          } ],
+          "counterparty" : [ {
+            "role" : "Party1",
+            "partyReference" : {
+              "externalReference" : "22214"
+            }
+          }, {
+            "role" : "Party2",
+            "partyReference" : {
+              "externalReference" : "traderx-matching-engine"
+            }
+          } ],
+          "parties" : [ {
+            "partyId" : [ {
+              "identifier" : {
+                "value" : "22214",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/account-id"
+                }
+              },
+              "meta" : {
+                "globalKey" : "2d81395"
+              }
+            } ],
+            "name" : {
+              "value" : "Test Account 20"
+            },
+            "meta" : {
+              "globalKey" : "ca8123b4",
+              "externalKey" : "22214"
+            }
+          }, {
+            "partyId" : [ {
+              "identifier" : {
+                "value" : "traderx-matching-engine",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/venue-id"
+                }
+              },
+              "meta" : {
+                "globalKey" : "fe4754ef"
+              }
+            } ],
+            "name" : {
+              "value" : "TraderX Matching Engine"
+            },
+            "meta" : {
+              "globalKey" : "967c9f3e",
+              "externalKey" : "traderx-matching-engine"
+            }
+          } ],
+          "partyRoles" : [ {
+            "partyReference" : {
+              "externalReference" : "traderx-matching-engine"
+            },
+            "role" : "Buyer"
+          }, {
+            "partyReference" : {
+              "externalReference" : "22214"
+            },
+            "role" : "Seller"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-matching-engine"
+            },
+            "role" : "ExecutionFacility"
+          } ],
+          "executionDetails" : {
+            "executionType" : "Electronic",
+            "executionVenue" : {
+              "name" : {
+                "value" : "TraderX Matching Engine"
+              },
+              "entityIdentifier" : [ {
+                "identifier" : {
+                  "value" : "traderx-matching-engine",
+                  "meta" : {
+                    "scheme" : "https://traderx.finos.org/venue-id"
+                  }
+                },
+                "identifierType" : "Other",
+                "meta" : {
+                  "globalKey" : "cf23cfe1"
+                }
+              } ],
+              "meta" : {
+                "globalKey" : "b038fa70"
+              }
+            },
+            "meta" : {
+              "globalKey" : "4cca3874"
+            }
+          },
+          "tradeDate" : {
+            "value" : "2026-10-29",
+            "meta" : {
+              "globalKey" : "3f529d",
+              "externalKey" : "tradeDate"
+            }
+          },
+          "tradeTime" : {
+            "value" : {
+              "time" : "15:00:00",
+              "location" : {
+                "value" : "UTC"
+              },
+              "meta" : {
+                "globalKey" : "6bc2c3a0"
+              }
+            },
+            "meta" : {
+              "globalKey" : "6bc2c3a0"
+            }
+          },
+          "tradeIdentifier" : [ {
+            "issuer" : {
+              "value" : "TraderX"
+            },
+            "assignedIdentifier" : [ {
+              "identifier" : {
+                "value" : "trd-017-0100",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/trade-id"
+                }
+              }
+            } ],
+            "meta" : {
+              "globalKey" : "295eda75"
+            }
+          } ]
+        }
+      }
+    } ]
+  },
+  "timestamp" : [ {
+    "dateTime" : "2026-10-29T15:00:00Z",
+    "qualification" : "eventCreationDateTime"
+  } ],
+  "eventIdentifier" : [ {
+    "issuer" : {
+      "value" : "TraderX"
+    },
+    "assignedIdentifier" : [ {
+      "identifier" : {
+        "value" : "trd-017-0100",
+        "meta" : {
+          "scheme" : "https://traderx.finos.org/trade-id"
+        }
+      },
+      "version" : 1
+    } ],
+    "meta" : {
+      "globalKey" : "27c742c"
+    }
+  } ],
+  "action" : "New",
+  "meta" : {
+    "globalKey" : "42a0b8b1",
+    "externalKey" : "trd-017-0100:proposed"
+  }
+}, {
+  "businessEvent" : {
+    "eventDate" : "2026-10-29",
+    "effectiveDate" : "2026-10-29",
+    "instruction" : [ {
+      "primitiveInstruction" : {
+        "execution" : {
+          "product" : {
+            "economicTerms" : {
+              "payout" : [ {
+                "SettlementPayout" : {
+                  "payerReceiver" : {
+                    "payer" : "Party1",
+                    "receiver" : "Party2"
+                  },
+                  "settlementTerms" : {
+                    "settlementType" : "Physical",
+                    "transferSettlementType" : "DeliveryVersusPayment",
+                    "settlementCurrency" : {
+                      "value" : "USD"
+                    },
+                    "settlementDate" : {
+                      "adjustableOrRelativeDate" : {
+                        "relativeDate" : {
+                          "periodMultiplier" : 2,
+                          "period" : "D",
+                          "meta" : {
+                            "globalKey" : "86f2e42c"
+                          },
+                          "dayType" : "Business",
+                          "businessDayConvention" : "NONE",
+                          "dateRelativeTo" : {
+                            "externalReference" : "tradeDate"
+                          }
+                        }
+                      },
+                      "meta" : {
+                        "globalKey" : "86f2e42c"
+                      }
+                    },
+                    "securitySettlementCentre" : "SecuritySettlementCentre",
+                    "cashSettlementCentre" : "CashSettlementCentre",
+                    "meta" : {
+                      "globalKey" : "e97011f0"
+                    }
+                  },
+                  "meta" : {
+                    "globalKey" : "64d382b4"
+                  },
+                  "underlier" : {
+                    "Observable" : {
+                      "value" : {
+                        "Asset" : {
+                          "Instrument" : {
+                            "Security" : {
+                              "identifier" : [ {
+                                "identifier" : {
+                                  "value" : "IBM"
+                                },
+                                "identifierType" : "ExchangeCode"
+                              }, {
+                                "identifier" : {
+                                  "value" : "XXIMQIJLGP45",
+                                  "meta" : {
+                                    "scheme" : "https://traderx.finos.org/demo-identifier"
+                                  }
+                                },
+                                "identifierType" : "ISIN"
+                              }, {
+                                "identifier" : {
+                                  "value" : "BBG821ZC5JC3",
+                                  "meta" : {
+                                    "scheme" : "https://traderx.finos.org/demo-identifier"
+                                  }
+                                },
+                                "identifierType" : "FIGI"
+                              }, {
+                                "identifier" : {
+                                  "value" : "International Business Machines"
+                                },
+                                "identifierType" : "Name"
+                              } ],
+                              "assetType" : "Security",
+                              "securityType" : "Equity",
+                              "equityType" : {
+                                "equityType" : "Ordinary"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              } ]
+            },
+            "meta" : {
+              "globalKey" : "64d382b4"
+            }
+          },
+          "priceQuantity" : [ {
+            "price" : [ {
+              "value" : {
+                "value" : 181.250,
+                "unit" : {
+                  "currency" : {
+                    "value" : "USD"
+                  }
+                },
+                "perUnitOf" : {
+                  "financialUnit" : "Share"
+                },
+                "priceType" : "AssetPrice",
+                "priceExpression" : "AbsoluteTerms",
+                "derivedQuantity" : {
+                  "value" : 36250.000,
+                  "unit" : {
+                    "currency" : {
+                      "value" : "USD"
+                    }
+                  }
+                }
+              }
+            } ],
+            "quantity" : {
+              "value" : {
+                "value" : 200,
+                "unit" : {
+                  "financialUnit" : "Share"
+                }
+              }
+            },
+            "meta" : {
+              "globalKey" : "6c96a038"
+            }
+          } ],
+          "counterparty" : [ {
+            "role" : "Party1",
+            "partyReference" : {
+              "externalReference" : "22214"
+            }
+          }, {
+            "role" : "Party2",
+            "partyReference" : {
+              "externalReference" : "traderx-matching-engine"
+            }
+          } ],
+          "parties" : [ {
+            "partyId" : [ {
+              "identifier" : {
+                "value" : "22214",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/account-id"
+                }
+              },
+              "meta" : {
+                "globalKey" : "2d81395"
+              }
+            } ],
+            "name" : {
+              "value" : "Test Account 20"
+            },
+            "meta" : {
+              "globalKey" : "ca8123b4",
+              "externalKey" : "22214"
+            }
+          }, {
+            "partyId" : [ {
+              "identifier" : {
+                "value" : "traderx-matching-engine",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/venue-id"
+                }
+              },
+              "meta" : {
+                "globalKey" : "fe4754ef"
+              }
+            } ],
+            "name" : {
+              "value" : "TraderX Matching Engine"
+            },
+            "meta" : {
+              "globalKey" : "967c9f3e",
+              "externalKey" : "traderx-matching-engine"
+            }
+          } ],
+          "partyRoles" : [ {
+            "partyReference" : {
+              "externalReference" : "traderx-matching-engine"
+            },
+            "role" : "Buyer"
+          }, {
+            "partyReference" : {
+              "externalReference" : "22214"
+            },
+            "role" : "Seller"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-matching-engine"
+            },
+            "role" : "ExecutionFacility"
+          } ],
+          "executionDetails" : {
+            "executionType" : "Electronic",
+            "executionVenue" : {
+              "name" : {
+                "value" : "TraderX Matching Engine"
+              },
+              "entityIdentifier" : [ {
+                "identifier" : {
+                  "value" : "traderx-matching-engine",
+                  "meta" : {
+                    "scheme" : "https://traderx.finos.org/venue-id"
+                  }
+                },
+                "identifierType" : "Other",
+                "meta" : {
+                  "globalKey" : "cf23cfe1"
+                }
+              } ],
+              "meta" : {
+                "globalKey" : "b038fa70"
+              }
+            },
+            "meta" : {
+              "globalKey" : "4cca3874"
+            }
+          },
+          "tradeDate" : {
+            "value" : "2026-10-29",
+            "meta" : {
+              "globalKey" : "3f529d",
+              "externalKey" : "tradeDate"
+            }
+          },
+          "tradeTime" : {
+            "value" : {
+              "time" : "15:00:00",
+              "location" : {
+                "value" : "UTC"
+              },
+              "meta" : {
+                "globalKey" : "6bc2c3a0"
+              }
+            },
+            "meta" : {
+              "globalKey" : "6bc2c3a0"
+            }
+          },
+          "tradeIdentifier" : [ {
+            "issuer" : {
+              "value" : "TraderX"
+            },
+            "assignedIdentifier" : [ {
+              "identifier" : {
+                "value" : "trd-017-0100",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/trade-id"
+                }
+              }
+            } ],
+            "meta" : {
+              "globalKey" : "295eda75"
+            }
+          } ]
+        }
+      }
+    } ],
+    "after" : [ {
+      "trade" : {
+        "product" : {
+          "economicTerms" : {
+            "payout" : [ {
+              "SettlementPayout" : {
+                "payerReceiver" : {
+                  "payer" : "Party1",
+                  "receiver" : "Party2"
+                },
+                "settlementTerms" : {
+                  "settlementType" : "Physical",
+                  "transferSettlementType" : "DeliveryVersusPayment",
+                  "settlementCurrency" : {
+                    "value" : "USD"
+                  },
+                  "settlementDate" : {
+                    "adjustableOrRelativeDate" : {
+                      "relativeDate" : {
+                        "periodMultiplier" : 2,
+                        "period" : "D",
+                        "meta" : {
+                          "globalKey" : "86f2e42c"
+                        },
+                        "dayType" : "Business",
+                        "businessDayConvention" : "NONE",
+                        "dateRelativeTo" : {
+                          "externalReference" : "tradeDate"
+                        }
+                      }
+                    },
+                    "meta" : {
+                      "globalKey" : "86f2e42c"
+                    }
+                  },
+                  "securitySettlementCentre" : "SecuritySettlementCentre",
+                  "cashSettlementCentre" : "CashSettlementCentre",
+                  "meta" : {
+                    "globalKey" : "e97011f0"
+                  }
+                },
+                "meta" : {
+                  "globalKey" : "64d382b4"
+                },
+                "underlier" : {
+                  "Observable" : {
+                    "value" : {
+                      "Asset" : {
+                        "Instrument" : {
+                          "Security" : {
+                            "identifier" : [ {
+                              "identifier" : {
+                                "value" : "IBM"
+                              },
+                              "identifierType" : "ExchangeCode"
+                            }, {
+                              "identifier" : {
+                                "value" : "XXIMQIJLGP45",
+                                "meta" : {
+                                  "scheme" : "https://traderx.finos.org/demo-identifier"
+                                }
+                              },
+                              "identifierType" : "ISIN"
+                            }, {
+                              "identifier" : {
+                                "value" : "BBG821ZC5JC3",
+                                "meta" : {
+                                  "scheme" : "https://traderx.finos.org/demo-identifier"
+                                }
+                              },
+                              "identifierType" : "FIGI"
+                            }, {
+                              "identifier" : {
+                                "value" : "International Business Machines"
+                              },
+                              "identifierType" : "Name"
+                            } ],
+                            "assetType" : "Security",
+                            "securityType" : "Equity",
+                            "equityType" : {
+                              "equityType" : "Ordinary"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            } ]
+          },
+          "meta" : {
+            "globalKey" : "64d382b4"
+          }
+        },
+        "tradeLot" : [ {
+          "priceQuantity" : [ {
+            "price" : [ {
+              "value" : {
+                "value" : 181.250,
+                "unit" : {
+                  "currency" : {
+                    "value" : "USD"
+                  }
+                },
+                "perUnitOf" : {
+                  "financialUnit" : "Share"
+                },
+                "priceType" : "AssetPrice",
+                "priceExpression" : "AbsoluteTerms",
+                "derivedQuantity" : {
+                  "value" : 36250.000,
+                  "unit" : {
+                    "currency" : {
+                      "value" : "USD"
+                    }
+                  }
+                }
+              }
+            } ],
+            "quantity" : {
+              "value" : {
+                "value" : 200,
+                "unit" : {
+                  "financialUnit" : "Share"
+                }
+              }
+            },
+            "meta" : {
+              "globalKey" : "6c96a038"
+            }
+          } ]
+        } ],
+        "counterparty" : [ {
+          "role" : "Party1",
+          "partyReference" : {
+            "externalReference" : "22214"
+          }
+        }, {
+          "role" : "Party2",
+          "partyReference" : {
+            "externalReference" : "traderx-matching-engine"
+          }
+        } ],
+        "tradeIdentifier" : [ {
+          "issuer" : {
+            "value" : "TraderX"
+          },
+          "assignedIdentifier" : [ {
+            "identifier" : {
+              "value" : "trd-017-0100",
+              "meta" : {
+                "scheme" : "https://traderx.finos.org/trade-id"
+              }
+            }
+          } ],
+          "meta" : {
+            "globalKey" : "295eda75"
+          }
+        } ],
+        "tradeDate" : {
+          "value" : "2026-10-29",
+          "meta" : {
+            "globalKey" : "3f529d",
+            "externalKey" : "tradeDate"
+          }
+        },
+        "party" : [ {
+          "partyId" : [ {
+            "identifier" : {
+              "value" : "22214",
+              "meta" : {
+                "scheme" : "https://traderx.finos.org/account-id"
+              }
+            },
+            "meta" : {
+              "globalKey" : "2d81395"
+            }
+          } ],
+          "name" : {
+            "value" : "Test Account 20"
+          },
+          "meta" : {
+            "globalKey" : "ca8123b4",
+            "externalKey" : "22214"
+          }
+        }, {
+          "partyId" : [ {
+            "identifier" : {
+              "value" : "traderx-matching-engine",
+              "meta" : {
+                "scheme" : "https://traderx.finos.org/venue-id"
+              }
+            },
+            "meta" : {
+              "globalKey" : "fe4754ef"
+            }
+          } ],
+          "name" : {
+            "value" : "TraderX Matching Engine"
+          },
+          "meta" : {
+            "globalKey" : "967c9f3e",
+            "externalKey" : "traderx-matching-engine"
+          }
+        } ],
+        "partyRole" : [ {
+          "partyReference" : {
+            "externalReference" : "traderx-matching-engine"
+          },
+          "role" : "Buyer"
+        }, {
+          "partyReference" : {
+            "externalReference" : "22214"
+          },
+          "role" : "Seller"
+        }, {
+          "partyReference" : {
+            "externalReference" : "traderx-matching-engine"
+          },
+          "role" : "ExecutionFacility"
+        } ],
+        "executionDetails" : {
+          "executionType" : "Electronic",
+          "executionVenue" : {
+            "name" : {
+              "value" : "TraderX Matching Engine"
+            },
+            "entityIdentifier" : [ {
+              "identifier" : {
+                "value" : "traderx-matching-engine",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/venue-id"
+                }
+              },
+              "identifierType" : "Other",
+              "meta" : {
+                "globalKey" : "cf23cfe1"
+              }
+            } ],
+            "meta" : {
+              "globalKey" : "b038fa70"
+            }
+          },
+          "meta" : {
+            "globalKey" : "4cca3874"
+          }
+        },
+        "meta" : {
+          "globalKey" : "b28a10f9"
+        }
+      },
+      "state" : {
+        "positionState" : "Executed"
+      },
+      "meta" : {
+        "globalKey" : "e0b59e48"
+      }
+    } ],
+    "meta" : {
+      "globalKey" : "87ed2093"
+    }
+  },
+  "previousWorkflowStep" : {
+    "globalReference" : "42a0b8b1",
+    "externalReference" : "trd-017-0100:proposed"
+  },
+  "timestamp" : [ {
+    "dateTime" : "2026-10-29T15:00:00Z",
+    "qualification" : "executionDateTime"
+  } ],
+  "eventIdentifier" : [ {
+    "issuer" : {
+      "value" : "TraderX"
+    },
+    "assignedIdentifier" : [ {
+      "identifier" : {
+        "value" : "trd-017-0100",
+        "meta" : {
+          "scheme" : "https://traderx.finos.org/trade-id"
+        }
+      },
+      "version" : 1
+    } ],
+    "meta" : {
+      "globalKey" : "27c742c"
+    }
+  } ],
+  "action" : "New",
+  "workflowState" : {
+    "workflowStatus" : "Accepted"
+  },
+  "meta" : {
+    "globalKey" : "43da3f83",
+    "externalKey" : "trd-017-0100:accepted"
+  }
+} ]

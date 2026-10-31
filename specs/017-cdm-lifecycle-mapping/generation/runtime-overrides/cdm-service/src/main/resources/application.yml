@@ -1,0 +1,51 @@
+server:
+  port: ${CDM_SERVICE_PORT:18120}
+  # Avoid "Request header is too large" when the service is behind an OIDC proxy.
+  max-http-request-header-size: 1000000
+
+spring:
+  application:
+    name: cdm-service
+  threads:
+    virtual:
+      enabled: true
+  # Shared TraderX Postgres. In compose: DATABASE_PG_HOST=database, port 5432,
+  # database/user/password traderx (same env vars as order-matcher).
+  datasource:
+    url: jdbc:postgresql://${DATABASE_PG_HOST:localhost}:${DATABASE_PG_PORT:5432}/${DATABASE_NAME:traderx}
+    driver-class-name: org.postgresql.Driver
+    username: ${DATABASE_DBUSER:traderx}
+    password: ${DATABASE_DBPASS:traderx}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # The cdm_documents table is owned by postgres-init/initialSchema.sql; never let
+      # Hibernate create or alter it, only check that the mapping matches.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+# Lifecycle adapter (Task 10): consumes /orders, /orders/rejected and /trades/booked and
+# publishes stored CDM objects on cdm.workflow, cdm.events and cdm.tradestate.
+cdm:
+  lifecycle:
+    nats:
+      enabled: ${CDM_LIFECYCLE_NATS_ENABLED:true}
+      address: ${NATS_ADDRESS:nats://${NATS_BROKER_HOST:nats-broker}:4222}
+    # Read back an order whose NEW event was missed (Ruling R26).
+    order-matcher-url: ${ORDER_MATCHER_URL:http://order-matcher:18110}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: cdm-service
+
+logging:
+  level:
+    root: info

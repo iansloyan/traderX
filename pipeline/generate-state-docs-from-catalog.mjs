@@ -85,6 +85,13 @@ const learningRouteFor = (stateId) => `/docs/learning/state-${stateId}`
 const learningRouteForLearningPathsDoc = (stateId) => `pathname:///docs/learning/state-${stateId}`
 const learningPathFor = (stateId) => path.join(learningDir, `state-${stateId}.md`)
 const branchLinkFor = (branch) => `${repoWebBase}/tree/${branch}`
+// An implemented state whose generation mode is still `planned` has no published generated-code
+// branch yet: its branch link is annotated rather than dropped (the branch is published once the
+// state is merged upstream).
+const unpublishedBranchNote = (state) =>
+  state.status === 'implemented' && state.generation?.mode === 'planned'
+    ? ' (published when the state is merged)'
+    : ''
 const compareLinkFor = (baseBranch, headBranch) =>
   `${repoWebBase}/compare/${encodeURIComponent(baseBranch)}...${encodeURIComponent(headBranch)}`
 const adrRouteFor = (recordPath) => {
@@ -346,7 +353,7 @@ ${renderContract(readContract(root, state), state)}
 
 ## Rendered Code
 
-- Generated branch: ${generatedBranch ? `[${generatedBranch}](${generatedBranchLink})` : '`n/a`'}
+- Generated branch: ${generatedBranch ? `[${generatedBranch}](${generatedBranchLink})${unpublishedBranchNote(state)}` : '`n/a`'}
 - Authoring branch (spec source): [${sourceAuthoringBranch}](${branchLinkFor(sourceAuthoringBranch)})
 
 ## Code Comparison With Previous State
@@ -451,7 +458,9 @@ const writeStateDocs = () => {
     const topologyRoute = topologyRouteFor(state)
     const learningRoute = learningRouteFor(state.id)
     const branchName = state.publish?.branch ?? 'n/a'
-    const branchCell = branchName !== 'n/a' ? `[${branchName}](${branchLinkFor(branchName)})` : '`n/a`'
+    const branchCell = branchName !== 'n/a'
+      ? `[${branchName}](${branchLinkFor(branchName)})${unpublishedBranchNote(state)}`
+      : '`n/a`'
     const researchRoute = stateDocRouteIfExists(state, 'research.md', 'research')
     const dataModelRoute = stateDocRouteIfExists(state, 'data-model.md', 'data-model')
     const quickstartRoute = stateDocRouteIfExists(state, 'quickstart.md', 'quickstart')
@@ -637,7 +646,7 @@ const writeVisualLearningGraphs = () => {
     const branchName = state.publish?.branch ?? 'n/a'
     const branchCell = branchName === 'n/a'
       ? '`n/a`'
-      : `[${branchName}](${branchLinkFor(branchName)})`
+      : `[${branchName}](${branchLinkFor(branchName)})${unpublishedBranchNote(state)}`
 
     return `| ${stateCell} | [link](${specRoute}) | [link](${architectureRoute}) | [link](${topologyRoute}) | [link](${learningRoute}) | ${branchCell} |`
   })

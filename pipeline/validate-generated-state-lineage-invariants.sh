@@ -166,6 +166,9 @@ allowed_roots_for_state() {
     014-fdc3-intent-interoperability)
       printf '%s\n' "${C2_COMPONENT_DIRS[@]}" "kubernetes-runtime" "tilt-kubernetes-dev-loop" "fdc3-intent-interoperability"
       ;;
+    017-cdm-lifecycle-mapping)
+      printf '%s\n' "${ORDER_COMPONENT_DIRS[@]}" "ingress" "order-management-matcher" "postgres-database-replacement" "cdm-lifecycle-mapping" "cdm-service"
+      ;;
     *)
       return 1
       ;;

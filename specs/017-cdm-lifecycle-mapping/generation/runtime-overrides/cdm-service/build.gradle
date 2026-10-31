@@ -1,0 +1,95 @@
+plugins {
+  id 'java'
+  id 'org.springframework.boot' version '4.0.8'
+  id 'io.spring.dependency-management' version '1.1.7'
+}
+
+// Version pins follow catalog/dependency-version-targets.json (enforced by
+// pipeline/validate-generated-dependency-targets.sh), same as order-matcher.
+// jackson-bom here is the Jackson 3 (tools.jackson) BOM used by Spring Boot 4 / Spring MVC.
+// CDM's rune runtime is built on Jackson 2 (com.fasterxml.jackson); Boot 4 manages that
+// line separately through its jackson-2-bom, so the two coexist (different packages).
+ext['jackson-bom.version'] = '3.1.5'
+ext['tomcat.version'] = '11.0.26'
+
+group = 'finos.traderx.cdm-service'
+version = '0.1.0'
+
+java {
+  sourceCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+  implementation 'org.springframework.boot:spring-boot-starter-actuator'
+  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+  runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+  runtimeOnly 'org.postgresql:postgresql:42.7.12'
+
+  implementation 'org.finos.cdm:cdm-java:7.8.0'
+  // NATS client, same version as order-matcher and trade-processor (state 009).
+  implementation 'io.nats:jnats:2.20.5'
+
+  constraints {
+    // cdm-java 7.8.0 asks for Guice 6.0.0, but the Rune/Xtext generator tooling that
+    // rune-common drags onto the runtime classpath (rune-maven-plugin -> EMF mwe2) asks for
+    // Guice 7.0.0, which wins by conflict resolution. Guice 7 only honours jakarta.inject,
+    // while the CDM generated functions are annotated with javax.inject.Inject, so under
+    // Guice 7 every @Inject field of a CDM function is silently left null. Pin Guice 6.0.0
+    // (supports both javax.inject and jakarta.inject and brings javax.inject:1).
+    implementation('com.google.inject:guice') {
+      version { strictly '6.0.0' }
+      because 'CDM generated code uses javax.inject.Inject, which Guice 7 ignores'
+    }
+  }
+
+  implementation ('ch.qos.logback:logback-core:1.6.3') {
+    because 'catalog logback version (Spring Boot 4.0.8 line); logback-core < 1.5.13 has CVE-2024-12798'
+  }
+  implementation 'ch.qos.logback:logback-classic:1.6.3'
+  implementation 'org.apache.logging.log4j:log4j-api:2.26.1'
+  implementation 'org.apache.logging.log4j:log4j-to-slf4j:2.26.1'
+  implementation 'org.apache.commons:commons-lang3:3.20.0'
+
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+  testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+  testRuntimeOnly 'com.h2database:h2'
+}
+
+tasks.withType(Test).configureEach {
+  useJUnitPlatform()
+  // Lifecycle golden examples (specs/017-cdm-lifecycle-mapping/contracts/examples): run with
+  // -Dcdm.writeGolden=true to rewrite them, and optionally -Dcdm.goldenDir=<dir>.
+  ['cdm.writeGolden', 'cdm.goldenDir'].each { name ->
+    def value = System.getProperty(name)
+    if (value != null) {
+      systemProperty name, value
+    }
+  }
+  outputs.upToDateWhen { System.getProperty('cdm.writeGolden') == null }
+  // The golden examples are test inputs: editing one reruns the comparison. Found the way the
+  // tests find them (walking up to the state pack), so this also works in the generated tree.
+  def goldenDir = System.getProperty('cdm.goldenDir') != null
+      ? file(System.getProperty('cdm.goldenDir'))
+      : findGoldenDir(projectDir)
+  if (goldenDir != null && goldenDir.isDirectory()) {
+    inputs.dir(goldenDir)
+        .withPropertyName('cdmGoldenExamples')
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+  }
+}
+
+static File findGoldenDir(File start) {
+  for (File dir = start; dir != null; dir = dir.parentFile) {
+    File pack = new File(dir, 'specs/017-cdm-lifecycle-mapping')
+    if (pack.isDirectory()) {
+      return new File(pack, 'contracts/examples')
+    }
+  }
+  return null
+}

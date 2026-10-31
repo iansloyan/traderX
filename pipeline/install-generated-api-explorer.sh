@@ -23,7 +23,7 @@ fi
 mkdir -p "${CONTRACTS_ROOT}"
 
 case "${STATE_ID}" in
-  006-*|007-*|008-*|009-*|010-*|011-*|012-*|013-*|014-*)
+  006-*|007-*|008-*|009-*|010-*|011-*|012-*|013-*|014-*|017-*)
     PUBSUB_INSPECTOR_ENABLED=1
     ;;
 esac
@@ -929,7 +929,12 @@ for (const def of serviceDefs) {
   }
 
   const contractName = `${def.id}-openapi.yaml`;
-  const contractFile = def.contractPath ? path.join(root, def.contractPath) : null;
+  // A state pack may ship its own contract for a service (e.g. additive fields such as
+  // state 017's cdmRef); it wins over the catalog's baseline contractPath.
+  const stateContractFile = path.join(root, 'specs', stateId, 'contracts', def.id, 'openapi.yaml');
+  const contractFile = fs.existsSync(stateContractFile)
+    ? stateContractFile
+    : (def.contractPath ? path.join(root, def.contractPath) : null);
   const hasContract = Boolean(contractFile && fs.existsSync(contractFile));
   if (hasContract) {
     const outFile = path.join(contractsRoot, contractName);

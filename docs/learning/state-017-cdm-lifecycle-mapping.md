@@ -1,0 +1,206 @@
+---
+title: "State 017: CDM Lifecycle, Party and Security Model"
+pagination_prev: null
+pagination_next: null
+---
+
+# State 017 Learning Guide
+
+<!-- Generated from specs/017-cdm-lifecycle-mapping/learning-contract.json; edit the source. -->
+
+## Adopt a common domain model alongside a working trading flow
+
+Most trading systems cannot stop and rebuild on a new domain model. For developers and architects evaluating the FINOS Common Domain Model (CDM), this chapter uses TraderX to demonstrate a path for phased adoption: CDM becomes the record for parties, people and securities, while orders and trades keep their operational model and gain a CDM lifecycle built from their events. The chapter asks what that buys you, what it costs, and where CDM and an order flow do not yet line up.
+
+[How to learn with TraderX states](/docs/learning/how-to-learn) · [Structured lesson JSON](/learning/contracts/017-cdm-lifecycle-mapping.json)
+
+**Maturity:** implemented. Run the exercises in a disposable local environment; use the quickstart for setup and cleanup.
+
+### Starting point
+
+The order-management state has limit orders, a demonstration matcher, partial fills and cancellation of the remainder. Its accounts, people, securities, orders and trades are simple TraderX JSON with no shared industry model behind them.
+
+Entry route: **combined**. Bring the knowledge from every declared predecessor.
+
+#### From 009-order-management-matcher
+
+[Predecessor guide](/docs/learning/state-009-order-management-matcher)
+
+- **Carry forward:** Limit orders, the demonstration matcher, partial fills, cancellation of the remainder, and every 009 API, NATS subject and screen, unchanged in shape.
+- **Why move:** State 009 has a realistic order-to-trade flow, but its records share no industry model, so nothing outside TraderX can interpret an order, a fill or a counterparty without TraderX-specific knowledge.
+- **Add or revise:** Add a cdm-service on FINOS CDM 7.8.0 that is authoritative for parties, people and securities and mirrors every order and trade event into validated CDM workflow steps and trade states, with a cdmRef on each existing record and a CDM tab in the UI.
+- **Evidence to collect:** Existing 009 screens and APIs keep working and gain a cdmRef that resolves to a valid CDM object. One order appears in CDM as a proposal approved by the venue, a separate workflow per fill each producing its own trade state, and a cancel that corrects the order without touching its fills. Lifecycle mirroring is asynchronous, so a CDM failure is recorded as a lifecycle failure instead of blocking a trade.
+- **Objectives:** `explain-adoption-boundary`, `trace-order-lineage`, `classify-gaps`
+
+| Before | After |
+| --- | --- |
+| Orders, fills, trades, accounts, traders and securities exist only as TraderX-specific JSON and database rows. | Parties, people and securities are CDM records served to the existing services as projections, and every order and trade has a validated CDM lifecycle mirrored alongside it, demonstrating how an existing system can adopt CDM without changing its trading path. |
+
+### Concepts before tools
+
+- A common domain model is a shared, machine-readable definition of trading objects (parties, products, trades) and of the events that change them, so different firms and systems describe the same trade the same way. FINOS CDM is one such model, published with validation rules and Java code.
+- Adopting a model incrementally means choosing, per kind of record, whether the new model is authoritative (the system of record, with existing APIs served as projections of it) or a mirror (built asynchronously from the existing system's events, so it can never block the existing flow).
+- CDM describes change as a workflow: a proposed step holds an instruction, an accepted step carries the business event that executes it, and each execution produces a trade state. An order resting at a venue is an approved proposal, not yet a trade.
+- A projection is a simpler view of a richer record. A lossless projection can be turned back into the same simple values; the fields that cannot be recovered must be listed rather than hidden.
+
+**Runtime prerequisites:** Use the state quickstart for tool versions, generation, start, test and stop commands. Linux or macOS with Docker and docker compose v2 is required; the first start builds the cdm-service image, which takes about a minute. Run one local state at a time because ports and generated output directories are shared.
+
+### Learning objectives
+
+- **explain-adoption-boundary:** Explain, using live records, which TraderX data is CDM-authoritative and which keeps its operational model with CDM mirrored asynchronously, and what each choice means when cdm-service is unavailable.
+- **trace-order-lineage:** Trace one partially filled and then cancelled order through its CDM proposal, venue approval, fill workflows, trade states and cancel, and reconcile the quantities with the 009 order and trade records.
+- **classify-gaps:** Classify the gaps the mapping found into TraderX improvements and open questions for the CDM community, and describe what a further step on the adoption path, with CDM deeper in the operational flow, would change.
+
+### Guided walkthrough
+
+#### 1. authoritative-reference-data (available)
+
+Objectives: `explain-adoption-boundary`.
+
+Start this state with --reset-data and confirm curl -s http://localhost:8080/cdm-service/health reports cdmVersion 7.8.0. Fetch account 22214 from /account-service/account/22214 and stock IBM from /reference-data/stocks/IBM, note their cdmRef values, and resolve each by appending it to /cdm-service/cdm/resolve/ (for example /cdm-service/cdm/resolve/cdm:party:22214). Compare the simple shape with the CDM Party and Security it came from.
+
+**Expected observation and meaning:** The account and stock keep their 009 fields and add a cdmRef such as cdm:party:22214 or cdm:security:IBM. The resolved objects are a CDM Party with a TraderX account-id identifier and a CDM Security with ticker, demo ISIN and demo FIGI identifiers, both reported valid. The extra CDM content is reachable only through cdmRef, not in the simple shape.
+
+Supporting material: [quickstart](/specs/cdm-lifecycle-mapping/quickstart) · [cdm-mapping](/specs/cdm-lifecycle-mapping/contracts/cdm-mapping) · [contract-delta](/specs/cdm-lifecycle-mapping/contracts/contract-delta).
+
+#### 2. order-lineage (available)
+
+Objectives: `trace-order-lineage`.
+
+In the UI at http://localhost:8080, pick account 22214 and place a limit order for 1500 IBM well below the market so the matcher does not fill it. Fill 750 with curl -X POST 'http://localhost:8080/order-matcher/orders/ORDERID/force-fill?quantity=750' (ORDERID is the order's id in the order blotter), then cancel the order from the order blotter. Click CDM on the order and open each node, including the raw CDM JSON of a fill's accepted step. Compare with the order and trade blotters.
+
+**Expected observation and meaning:** The CDM tree shows the order proposal approved by the TraderX Matching Engine, one fill of 750 with its own proposed and accepted steps whose business event produces a TradeState, and a Cancel (remainder 750): a correction of the proposal with status Cancelled. The 009 order shows 750 filled and 750 cancelled, and exactly one booked trade of 750 exists. The fill is linked to the order only by the order id in its identifiers.
+
+Supporting material: [cdm-mapping](/specs/cdm-lifecycle-mapping/contracts/cdm-mapping) · [architecture](/specs/cdm-lifecycle-mapping/system/architecture) · [research](/specs/cdm-lifecycle-mapping/research).
+
+#### 3. mirror-not-blocking (available)
+
+Objectives: `explain-adoption-boundary`, `classify-gaps`.
+
+Submit an order for a ticker that is not in reference data (for example ZZZZ) through POST /order-matcher/orders, then check the order in the order blotter and the lifecycle failures on the CDM tab. As a reading exercise, use the mapping specification's semantic-gap section to predict what happens to a trade submitted while cdm-service is down.
+
+**Expected observation and meaning:** The matcher accepts the order as NEW, because 009 does not validate tickers; cdm-service cannot map an unknown security and records a lifecycle failure, while trading carries on. The reading exercise predicts that account, people and reference-data requests answer 503 and a trade submit fails, because those records are CDM-authoritative. This outage case is not exercised at runtime here.
+
+Supporting material: [cdm-mapping](/specs/cdm-lifecycle-mapping/contracts/cdm-mapping) · [spec](/specs/cdm-lifecycle-mapping/spec).
+
+### Demonstrate your understanding
+
+**Question (`explain-adoption-boundary`):** Which TraderX records are authoritative in CDM in this state, which are mirrored, and why would a team make that split when it first adopts CDM?
+
+**Assessment guidance:** An adequate answer names parties, people and securities as CDM-authoritative (served as projections with cdmRef) and orders and trades as operational records mirrored asynchronously. It should weigh the benefit (no change to the trading path, a validated CDM record over time) against the cost (reference-data services depend on cdm-service being up) and cite the observed cdmRef resolution and lifecycle-failure behaviour rather than the documentation alone.
+
+**Question (`trace-order-lineage`):** For an order of 1500 that filled 750 and was then cancelled, list every CDM object the state produced and reconcile its quantities with the 009 order and trade records.
+
+**Assessment guidance:** Expect the approved order proposal (1500), one fill workflow with proposed and accepted steps and a TradeState for 750, and a Cancelled correction recording 750 cancelled and 750 executed, matching one booked trade of 750 and the 009 order quantities. The answer should note that the cancel does not reverse the fill and that the order-to-fill link is an identifier convention. A reconciliation without observed records is reading practice only.
+
+**Question (`classify-gaps`):** Take three gaps from the mapping specification. For each, say whether it is a TraderX improvement or a question for the CDM community, and what a further step on the adoption path, with CDM driving more of the lifecycle, would do about it.
+
+**Assessment guidance:** Good examples: unknown tickers not rejected and the cdm-service outage dependency are TraderX improvements; the missing parent-to-child instruction link, venue acceptance only as approval, and cancel of the remainder as a correction are CDM community questions. A strong answer explains that a further state could have the matcher emit CDM instructions and events directly, validate before acceptance, or extend to allocation and settlement, and states which of those trade-offs it cannot yet evaluate.
+
+### Work with a learning partner
+
+Use the [learning-partner protocol](/docs/learning/how-to-learn#learn-with-an-agent) with a human or an agent. Ask for a prediction before running the exercise, offer one hint at a time, and discuss the assessment guidance after the learner has attempted an explanation.
+
+**Objectives:** `explain-adoption-boundary`.
+
+**Check the starting point:** What is the difference between a system of record and a read-only mirror of the same data, and which one can block a write when it is unavailable?
+
+**Ask before the experiment:** Before resolving the account's cdmRef, predict which fields the CDM Party will have that the account-service response does not.
+
+**Hints, in order:**
+
+1. Compare the account-service response with the resolved Party field by field; anything only in the Party is CDM content the projection leaves out.
+2. Ask which service answers when cdm-service is down: projections of authoritative data cannot, while mirrored lifecycles simply catch up later.
+
+**Misconception to probe (not a fact):** Adding CDM means every TraderX service now reads and writes CDM objects, so trading stops if CDM fails.
+
+**Evidence to ask the learner for:** Ask for the account and stock responses with their cdmRef values, the resolved CDM objects, and the learner's explanation of which records are authoritative and which are mirrored.
+
+**Objectives:** `trace-order-lineage`.
+
+**Check the starting point:** In state 009, how are an order's requested, filled and remaining quantities related, and does cancelling the remainder change booked trades?
+
+**Ask before the experiment:** Predict how many CDM workflows and trade states an order with one partial fill and a cancel will produce.
+
+**Hints, in order:**
+
+1. Start from the order proposal and its approval; then look for workflows that carry the order id in their identifiers.
+2. Each fill has its own proposed and accepted steps; the accepted step's business event has an after that is the fill's TradeState. The cancel corrects the proposal, not the trade.
+
+**Misconception to probe (not a fact):** An order is one CDM trade whose quantity grows with each fill, and cancelling the order cancels its trades.
+
+**Evidence to ask the learner for:** Ask for the order lineage view or /cdm-service/cdm/orders/ORDERID/lineage output, the 009 order record and the booked trade, with the learner's quantity reconciliation.
+
+**Objectives:** `classify-gaps`.
+
+**Check the starting point:** When a model cannot express something your system does, what are the options: change the system, extend the model, or record the mismatch?
+
+**Ask before the experiment:** Predict whether an order for an unknown ticker will be rejected by TraderX, rejected by CDM, or accepted and flagged.
+
+**Hints, in order:**
+
+1. Read how the mapping specification groups its semantic gaps: questions for the CDM community, TraderX improvements, and demonstration scope.
+2. For each gap, ask whose code would change to close it: TraderX services, the CDM model itself, or both.
+
+**Misconception to probe (not a fact):** Every mismatch between TraderX and CDM is a defect in CDM.
+
+**Evidence to ask the learner for:** Ask for the unknown-ticker order status and lifecycle failure, and the learner's classification of at least three gaps with a proposed next step for each.
+
+### Scope and limitations
+
+- CDM is mirrored after the fact for orders and trades: this state does not show CDM driving matching, validation or booking. Deeper integration, other products and other lifecycles are directions for further states.
+- ISIN and FIGI values are synthetic demo identifiers, and settlement terms (USD, T+2, delivery versus payment) are stated defaults, not observed. No settlement, clearing, allocation or confirmation events are modelled.
+- The matcher publishes booked trades only, so each fill's CDM proposal and acceptance are reconstructed together. That matches a central limit order book; on RFQ or block venues they would be separate messages.
+- The cdm-service outage behaviour and the missed-event backfill are described and covered by scenario tests, but the walkthrough does not ask the learner to stop cdm-service.
+- This is an educational local demonstration. Passing its checks does not establish CDM conformance for production use, regulatory reporting correctness, or behaviour under every failure mode.
+
+
+## Position In Learning Graph
+
+- Previous state(s): [009-order-management-matcher](/docs/learning/state-009-order-management-matcher)
+- Dotted-line parent(s): none
+- Next state(s): none
+
+## Convergence Metadata
+
+- Convergence state: `no`
+- Convergence level: `none`
+- Lineage role: `optional`
+- Nearest previous convergence: `none`
+- Nearest next convergence: `none`
+
+## Rendered Code
+
+- Generated branch: [code/generated-state-017-cdm-lifecycle-mapping](https://github.com/finos/traderX/tree/code/generated-state-017-cdm-lifecycle-mapping) (published when the state is merged)
+- Authoring branch (spec source): [main](https://github.com/finos/traderX/tree/main)
+
+## Code Comparison With Previous State
+
+- Compare against `009-order-management-matcher`: [code/generated-state-009-order-management-matcher...code/generated-state-017-cdm-lifecycle-mapping](https://github.com/finos/traderX/compare/code%2Fgenerated-state-009-order-management-matcher...code%2Fgenerated-state-017-cdm-lifecycle-mapping)
+
+## Plain-English Code Delta
+
+- **Added:** New `cdm-service` (Java 21, Spring Boot, FINOS `cdm-java` 7.8.0) that owns a versioned CDM store in Postgres and is the system of record for parties, persons and securities (FR-01701 to FR-01707).
+- **Added:** Every order and trade event becomes lineage-linked CDM: a `WorkflowStep` chain proposed → accepted → one execution step per fill → cancel, with a qualified execution `BusinessEvent` and a `TradeState` per fill; rejected requests and direct trades use the same shapes (FR-01708 to FR-01716).
+- **Added:** Optional `cdmRef` (`cdm:<kind>:<externalKey>`) on account, account-user, person, stock, order, trade and position payloads, resolvable at `/cdm-service/cdm/resolve/{cdmRef}`; round trips through CDM are lossless for the documented fields (FR-01718, FR-01719).
+- **Added:** CDM read APIs (order and trade lineage, positions as a CDM `PortfolioState`, rejections, validation summary) and a CDM view in the UI at `/cdm` with lineage, party and security cards and raw CDM JSON (FR-01720 to FR-01722).
+- **Added:** New NATS subjects `/trades/booked`, `/orders/rejected` and `cdm.workflow`, `cdm.events`, `cdm.tradestate` (FR-01713, FR-01723).
+- **Changed:** account-service, people-service and reference-data serve their 009 shapes as projections of the CDM masters; account and account-user writes go through cdm-service (FR-01704, FR-01705, FR-01707).
+- **Changed:** Order fills carry the matcher's `orderId` through trade-service and trade-processor; order events gain `filledQuantity` and `canceledQuantity`; admin force-fill takes an optional `quantity` (FR-01710, FR-01713, FR-01717).
+- **Changed:** The matcher seeds only `NEW` demo orders in this state, and cdm-service imports seed trades, open orders and missed fills at startup (FR-01725).
+
+## Run This State
+
+```bash
+./scripts/start-state-017-cdm-lifecycle-mapping-generated.sh
+```
+
+## Canonical Spec Links
+
+- State spec pack: [/specs/cdm-lifecycle-mapping](/specs/cdm-lifecycle-mapping)
+- Architecture: [/specs/cdm-lifecycle-mapping/system/architecture](/specs/cdm-lifecycle-mapping/system/architecture)
+- Flows / topology: [/specs/cdm-lifecycle-mapping/system/runtime-topology](/specs/cdm-lifecycle-mapping/system/runtime-topology)
+- Research: [link](/specs/cdm-lifecycle-mapping/research)
+- Data model: [link](/specs/cdm-lifecycle-mapping/data-model)
+- Quickstart: [link](/specs/cdm-lifecycle-mapping/quickstart)
+

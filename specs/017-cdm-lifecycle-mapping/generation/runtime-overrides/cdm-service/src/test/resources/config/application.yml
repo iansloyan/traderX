@@ -1,0 +1,31 @@
+# Test-only overrides. Spring Boot loads classpath:/config/application.yml on top of
+# classpath:/application.yml, so every test (including @SpringBootTest) runs against an
+# in-memory H2 in PostgreSQL mode instead of the runtime Postgres. The schema is created from
+# the same DDL as postgres-init/initialSchema.sql and Hibernate validates the mapping.
+# Each Spring test context gets its own uniquely named in-memory database.
+spring:
+  datasource:
+    url: jdbc:h2:mem:cdm-${random.uuid};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  sql:
+    init:
+      mode: always
+      schema-locations:
+        - classpath:schema/cdm_documents.sql
+        - classpath:schema/traderx_accounts.sql
+        - classpath:schema/cdm_lifecycle.sql
+        - classpath:schema/traderx_trades.sql
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: validate
+# The NATS lifecycle listener never starts in tests (the adapter is tested directly).
+# The seed-trade backfill does not run at startup in tests (SeedTradeBackfillTest calls it).
+cdm:
+  lifecycle:
+    nats:
+      enabled: false
+    backfill:
+      enabled: false

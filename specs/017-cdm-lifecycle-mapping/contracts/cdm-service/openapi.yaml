@@ -1,0 +1,617 @@
+openapi: 3.0.1
+info:
+  title: FINOS TraderX CDM Service (state 017)
+  version: 0.1.0
+  description: >
+    FINOS CDM 7.8.0 system of record for parties, persons and securities, and the CDM lifecycle
+    (WorkflowSteps, the execution BusinessEvent inside each accepted step, TradeStates) built from
+    TraderX order and trade events: an order is a proposal approved by the venue, each fill its own
+    proposed -> accepted workflow, each trade a TradeState.
+    CDM objects are returned in Rosetta JSON. Mapping rules:
+    specs/017-cdm-lifecycle-mapping/contracts/cdm-mapping.md. Behind ingress at /cdm-service/.
+servers:
+  - url: /cdm-service
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Ready once the security and party masters are seeded
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  service: { type: string, example: cdm-service }
+                  cdmVersion: { type: string, example: 7.8.0 }
+        "503":
+          description: Masters still seeding
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: starting }
+  /cdm/resolve/{cdmRef}:
+    get:
+      operationId: resolve
+      summary: Resolve a cdmRef (cdm:<kind>:<externalKey>) to its CDM object
+      description: >
+        Kinds party, person, security, order, trade, direct, position. cdm:order:<id> returns the
+        order's own latest version (the cancel, else the latest proposal version; never a fill step)
+        with a Link header to its lineage. cdm:trade:<id> returns the TradeState. cdm:direct:<id>
+        returns the direct trade's workflow as a CDM cdm.event.workflow.Workflow built on read (no
+        X-CDM-Global-Key; X-CDM-Validation is the worst status of its steps).
+      parameters:
+        - $ref: '#/components/parameters/CdmRef'
+      responses:
+        "200":
+          $ref: '#/components/responses/CdmObject'
+        "400":
+          description: Malformed cdmRef
+        "404":
+          $ref: '#/components/responses/Pending'
+  /cdm/securities/{ticker}:
+    get:
+      operationId: security
+      summary: CDM Security of a ticker (case-sensitive)
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema: { type: string, example: IBM }
+      responses:
+        "200":
+          $ref: '#/components/responses/CdmObject'
+        "404":
+          description: Unknown ticker
+  /cdm/parties/{key}:
+    get:
+      operationId: party
+      summary: CDM Party of an account id (persons resolved), or the venue party traderx-matching-engine
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, example: "22214" }
+      responses:
+        "200":
+          $ref: '#/components/responses/CdmObject'
+        "404":
+          description: Unknown party
+  /cdm/orders/{orderId}/lineage:
+    get:
+      operationId: orderLineage
+      summary: An order (or rejection id) as its proposal versions with the venue approval, its fills (each its own proposed -> accepted workflow with its trade state) and its cancel
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, example: ord-013-0001 }
+      responses:
+        "200":
+          description: Lineage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderLineage'
+        "404":
+          $ref: '#/components/responses/Pending'
+  /cdm/trades/{tradeId}:
+    get:
+      operationId: trade
+      summary: The trade's TradeState first, then the workflow step that produced it
+      parameters:
+        - $ref: '#/components/parameters/TradeId'
+      responses:
+        "200":
+          description: Trade
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cdmRef: { type: string, example: "cdm:trade:trd-017-0003" }
+                  tradeState: { $ref: '#/components/schemas/StoredObject' }
+                  producedBy: { $ref: '#/components/schemas/ProducedBy' }
+                  executionType: { $ref: '#/components/schemas/ExecutionType' }
+                  executionTypeMeaning: { type: string }
+        "404":
+          $ref: '#/components/responses/Pending'
+  /cdm/trades/{tradeId}/lineage:
+    get:
+      operationId: tradeLineage
+      summary: The trade state summary, then the fill or direct-trade workflow that produced it, with its proposed and accepted steps
+      parameters:
+        - $ref: '#/components/parameters/TradeId'
+      responses:
+        "200":
+          description: Trade lineage
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cdmRef: { type: string }
+                  tradeId: { type: string }
+                  tradeState: { $ref: '#/components/schemas/TradeStateDetail' }
+                  executionType: { $ref: '#/components/schemas/ExecutionType' }
+                  executionTypeMeaning: { type: string }
+                  producedBy:
+                    allOf:
+                      - $ref: '#/components/schemas/ProducedBy'
+                      - type: object
+                        properties:
+                          proposed: { $ref: '#/components/schemas/Step' }
+                          accepted: { $ref: '#/components/schemas/Step' }
+        "404":
+          $ref: '#/components/responses/Pending'
+  /cdm/positions/{accountId}:
+    get:
+      operationId: positions
+      summary: The account's CDM PortfolioState, derived on read from its TradeStates
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        "200":
+          description: Portfolio state envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cdmRef: { type: string, example: "cdm:position:22214" }
+                  cdmType: { type: string, example: cdm.event.position.PortfolioState }
+                  storeGlobalKey: { type: string }
+                  cdmGlobalKey: { type: string }
+                  validation: { $ref: '#/components/schemas/Validation' }
+                  object: { type: object }
+                  initialState: { type: object }
+                  trades: { type: array, items: { type: object } }
+                  skipped: { type: array, items: { type: object } }
+                  positions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        cdmRef: { type: string, example: "cdm:position:22214:IBM" }
+                        security: { type: string }
+                        quantity: { type: number }
+                        trades:
+                          type: array
+                          description: The trade states behind the holding, in execution order; their signed quantities sum to quantity
+                          items:
+                            type: object
+                            properties:
+                              tradeId: { type: string }
+                              cdmRef: { type: string }
+                              signedQuantity: { type: number }
+                              price: { type: number }
+                              side: { type: string, enum: [Buy, Sell] }
+                              executedAt: { type: string, nullable: true }
+        "400":
+          description: Non-numeric account id
+        "404":
+          $ref: '#/components/responses/Pending'
+  /cdm/rejections:
+    get:
+      operationId: rejections
+      summary: Rejected order requests (oldest first)
+      parameters:
+        - name: accountId
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Rejections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accountId: { type: integer, nullable: true }
+                  rejections: { type: array, items: { type: object } }
+  /cdm/validation-summary:
+    get:
+      operationId: validationSummary
+      summary: Validation counts, not-valid objects, failures, parked events and backfill progress
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  objects: { type: object }
+                  latest: { type: object }
+                  notValid: { type: array, items: { type: object } }
+                  failures: { type: object }
+                  pending: { type: object }
+                  backfill: { type: object }
+  /projections/stocks:
+    get:
+      operationId: stocks
+      responses:
+        "200":
+          description: Stocks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StockProjection' }
+        "503":
+          description: Security master not seeded yet
+  /projections/stocks/{ticker}:
+    get:
+      operationId: stock
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Stock
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockProjection' }
+        "404":
+          description: Unknown ticker
+        "503":
+          description: Security master not seeded yet
+  /projections/accounts:
+    get:
+      operationId: accounts
+      responses:
+        "200":
+          description: Accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AccountProjection' }
+        "503":
+          description: Party master not seeded yet
+    post:
+      operationId: createAccount
+      summary: Create (no id, or id <= 0) or upsert an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AccountWrite' }
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountProjection' }
+        "400":
+          description: displayName over 50 characters
+        "409":
+          description: No free account id
+        "503":
+          description: Party master not ready, or the CDM store write failed
+  /projections/accounts/{id}:
+    get:
+      operationId: account
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountProjection' }
+        "404":
+          description: Unknown account
+    put:
+      operationId: updateAccount
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AccountWrite' }
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountProjection' }
+        "400":
+          description: displayName over 50 characters
+  /projections/accountusers:
+    get:
+      operationId: accountUsers
+      parameters:
+        - name: accountId
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Account users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AccountUserProjection' }
+    post:
+      operationId: addAccountUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                accountId: { type: integer }
+                username: { type: string, maxLength: 15 }
+      responses:
+        "200":
+          description: Account user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountUserProjection' }
+        "400":
+          description: username blank or over 15 characters
+        "404":
+          description: Unknown account
+  /projections/people:
+    get:
+      operationId: people
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+        - name: employeeId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Directory persons (identifier-only persons are never listed)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PersonProjection' }
+        "503":
+          description: Party master not seeded yet
+  /projections/people/{logonId}:
+    get:
+      operationId: person
+      parameters:
+        - name: logonId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Person
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonProjection' }
+        "404":
+          description: Unknown or identifier-only person
+  /projections/positions/{accountId}:
+    get:
+      operationId: positionProjection
+      summary: The position-service shape plus cdmRef, computed from CDM
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        "200":
+          description: Positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PositionProjection' }
+components:
+  parameters:
+    CdmRef:
+      name: cdmRef
+      in: path
+      required: true
+      schema: { type: string, example: "cdm:party:22214" }
+    TradeId:
+      name: tradeId
+      in: path
+      required: true
+      schema: { type: string }
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema: { type: string, example: "22214" }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+  responses:
+    CdmObject:
+      description: >
+        One CDM object in Rosetta JSON. Headers X-CDM-Type, X-CDM-Validation and X-CDM-Global-Key
+        (store key) are set for stored objects.
+      content:
+        application/json:
+          schema: { type: object }
+    Pending:
+      description: Not (yet) in CDM; cdmRefs are deterministic, so this can be transient
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              cdmRef: { type: string }
+              status: { type: string, example: pending }
+  schemas:
+    Validation:
+      type: object
+      properties:
+        status: { type: string, enum: [VALID, INVALID, NOT_QUALIFIED] }
+        messages: { type: array, items: { type: string } }
+    StoredObject:
+      type: object
+      nullable: true
+      properties:
+        cdmRef: { type: string }
+        cdmType: { type: string }
+        storeGlobalKey: { type: string, description: SHA-256 of the canonical JSON }
+        cdmGlobalKey: { type: string, description: Rune meta.globalKey }
+        previousStoreGlobalKey: { type: string, nullable: true }
+        validation: { $ref: '#/components/schemas/Validation' }
+        object: { type: object }
+    ExecutionType:
+      type: string
+      enum: [OnVenue, Electronic]
+      description: >
+        CDM ExecutionTypeEnum. OnVenue for orders and matcher fills, Electronic for direct trades from
+        the trade ticket; executionTypeMeaning gives the TraderX meaning next to every value.
+    Step:
+      nullable: true
+      allOf:
+        - $ref: '#/components/schemas/StoredObject'
+        - type: object
+          properties:
+            stepType: { type: string, enum: [proposed, approved, rejected, cancel, fill-proposed, fill-accepted, accepted] }
+            createdAt: { type: string }
+            timestamp: { type: string }
+    Approval:
+      type: object
+      nullable: true
+      properties:
+        approved: { type: boolean }
+        party: { type: string, example: "cdm:party:traderx-matching-engine" }
+        timestamp: { type: string }
+        rejectedReason: { type: string, nullable: true }
+        stepStoreGlobalKey: { type: string }
+    TradeStateSummary:
+      type: object
+      nullable: true
+      properties:
+        cdmRef: { type: string }
+        storeGlobalKey: { type: string }
+        cdmGlobalKey: { type: string }
+        positionState: { type: string, example: Executed }
+        validation: { $ref: '#/components/schemas/Validation' }
+    TradeStateDetail:
+      allOf:
+        - $ref: '#/components/schemas/TradeStateSummary'
+        - type: object
+          properties:
+            tradeId: { type: string }
+            previousStoreGlobalKey: { type: string, nullable: true }
+            quantity: { type: number }
+            price: { type: number }
+            side: { type: string, enum: [Buy, Sell] }
+            account: { type: object }
+            venue: { type: object }
+            security: { type: object }
+    ProducedBy:
+      type: object
+      nullable: true
+      description: The accepted step whose business event produced the trade state (null if none is linked)
+      properties:
+        cdmRef: { type: string, example: "cdm:order:ord-013-0101" }
+        storeGlobalKey: { type: string }
+        kind: { type: string, enum: [fill, direct] }
+        orderId: { type: string, nullable: true }
+        fillNumber: { type: integer, nullable: true }
+        label: { type: string, nullable: true }
+        lineage: { type: string }
+    Fill:
+      type: object
+      properties:
+        fillNumber: { type: integer, description: Booking order (trade time, then trade id), computed on read }
+        label: { type: string, example: Partial fill 1 }
+        tradeId: { type: string }
+        quantity: { type: number }
+        price: { type: number }
+        executedAt: { type: string }
+        filledSoFar: { type: number }
+        executionType: { $ref: '#/components/schemas/ExecutionType' }
+        executionTypeMeaning: { type: string }
+        proposed: { $ref: '#/components/schemas/Step' }
+        accepted: { $ref: '#/components/schemas/Step' }
+        tradeState: { $ref: '#/components/schemas/TradeStateSummary' }
+    OrderLineage:
+      type: object
+      properties:
+        cdmRef: { type: string }
+        orderId: { type: string }
+        status: { type: string, enum: [pending, proposed, accepted, partially-filled, filled, canceled, rejected] }
+        instructionQuantity: { type: number }
+        executedQuantity: { type: number }
+        canceledQuantity: { type: number }
+        remainingQuantity: { type: number }
+        remainingQuantityFormula: { type: string }
+        quantityWarning: { type: string, nullable: true }
+        proposal:
+          type: object
+          properties:
+            executionType: { $ref: '#/components/schemas/ExecutionType' }
+            executionTypeMeaning: { type: string }
+            versions:
+              type: array
+              description: The order's own steps in write order (proposed, then approved or rejected)
+              items: { $ref: '#/components/schemas/Step' }
+            approval: { $ref: '#/components/schemas/Approval' }
+        fills: { type: array, items: { $ref: '#/components/schemas/Fill' } }
+        cancel: { $ref: '#/components/schemas/Step' }
+        parties: { type: object }
+        security: { type: object }
+        failures: { type: array, items: { type: object } }
+        pending: { type: object }
+    StockProjection:
+      type: object
+      properties:
+        ticker: { type: string }
+        companyName: { type: string }
+        cdmRef: { type: string, example: "cdm:security:IBM" }
+    AccountWrite:
+      type: object
+      properties:
+        id: { type: integer, nullable: true }
+        displayName: { type: string, maxLength: 50 }
+    AccountProjection:
+      type: object
+      properties:
+        id: { type: integer }
+        displayName: { type: string }
+        cdmRef: { type: string, example: "cdm:party:22214" }
+    AccountUserProjection:
+      type: object
+      properties:
+        accountId: { type: integer }
+        username: { type: string }
+        cdmRef: { type: string, example: "cdm:person:user01" }
+    PersonProjection:
+      type: object
+      properties:
+        logonId: { type: string }
+        fullName: { type: string }
+        email: { type: string }
+        employeeId: { type: string }
+        department: { type: string }
+        photoUrl: { type: string }
+        cdmRef: { type: string, example: "cdm:person:user01" }
+    PositionProjection:
+      type: object
+      properties:
+        accountId: { type: integer }
+        security: { type: string }
+        quantity: { type: integer }
+        averageCostBasis: { type: number }
+        updated: { type: string }
+        cdmRef: { type: string, example: "cdm:position:22214:IBM" }

@@ -1,0 +1,137 @@
+openapi: 3.0.1
+info:
+  title: FINOS TraderX Position Service (Spec-First)
+  version: 0.1.0
+paths:
+  /trades/{accountId}:
+    get:
+      operationId: getTradesByAccountId
+      summary: Get trades for account
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trade'
+  /trades/:
+    get:
+      operationId: getAllTrades
+      summary: Get all trades
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trade'
+  /positions/{accountId}:
+    get:
+      operationId: getPositionsByAccountId
+      summary: Get positions for account
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+  /positions/:
+    get:
+      operationId: getAllPositions
+      summary: Get all positions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+  /health/ready:
+    get:
+      operationId: healthReady
+      summary: Readiness health probe
+      responses:
+        "200":
+          description: OK
+  /health/alive:
+    get:
+      operationId: healthAlive
+      summary: Liveness health probe
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    Position:
+      type: object
+      properties:
+        accountId:
+          type: integer
+          format: int32
+        security:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        averageCostBasis:
+          type: number
+        updated:
+          type: string
+          format: date-time
+        cdmRef:
+          type: string
+          nullable: true
+          description: Optional (state 017). Reference of the CDM Position, `cdm:position:<accountId>:<security>`; absent when either part is null.
+          example: cdm:position:22214:IBM
+    Trade:
+      type: object
+      description: Trade rows keep their 009 fields; state 017 adds the optional, derived `cdmRef`.
+      properties:
+        id:
+          type: string
+        accountId:
+          type: integer
+          format: int32
+        security:
+          type: string
+        side:
+          type: string
+        state:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        price:
+          type: number
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        cdmRef:
+          type: string
+          nullable: true
+          description: Optional (state 017). Reference of the CDM trade, `cdm:trade:<id>` (derived from the id, not stored); absent when the id is null.
+          example: cdm:trade:TRADE-22214-AABBCC

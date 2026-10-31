@@ -198,6 +198,12 @@ case "${STATE_ID}" in
     copy_script_if_exists "test-state-009-order-management-matcher.sh"
     copy_script_if_exists "test-messaging-009-order-management-matcher.sh"
     ;;
+  017-cdm-lifecycle-mapping)
+    copy_script_if_exists "start-state-017-cdm-lifecycle-mapping-generated.sh"
+    copy_script_if_exists "stop-state-017-cdm-lifecycle-mapping-generated.sh"
+    copy_script_if_exists "status-state-017-cdm-lifecycle-mapping-generated.sh"
+    copy_script_if_exists "test-state-017-cdm-lifecycle-mapping.sh"
+    ;;
   010-kubernetes-runtime)
     copy_script_if_exists "start-state-010-kubernetes-runtime-generated.sh"
     copy_script_if_exists "stop-state-010-kubernetes-runtime-generated.sh"
@@ -247,7 +253,7 @@ case "${STATE_ID}" in
 esac
 
 case "${STATE_ID}" in
-  004-*|005-*|006-*|007-*|008-*|009-*|010-*|011-*|012-*|013-*|014-*)
+  004-*|005-*|006-*|007-*|008-*|009-*|010-*|011-*|012-*|013-*|014-*|017-*)
     gen_depth="${TRADERX_GENERATION_DEPTH:-0}"
     if (( gen_depth <= 2 )) || [[ "${TRADERX_RUNTIME_NORMALIZE_IN_NESTED_GENERATION:-0}" == "1" ]]; then
       normalize_containerized_compose_cors_origins
@@ -763,6 +769,35 @@ Grafana access:
 - Default convention: user from `TRADERX_GRAFANA_ADMIN_USER` or `traderx-admin`; password from `TRADERX_GRAFANA_ADMIN_PASSWORD` or `traderx-state-009`.
 EOF
       ;;
+    017-cdm-lifecycle-mapping)
+      cat > "${TARGET_ROOT}/RUN_FROM_GENERATED.md" <<'EOF'
+# Run From Generated (State 017)
+
+Start (choose one):
+
+```bash
+# Full start (build + start)
+./scripts/start-state-017-cdm-lifecycle-mapping-generated.sh
+
+# Fast restart (reuse existing artifacts; skips build)
+./scripts/start-state-017-cdm-lifecycle-mapping-generated.sh --skip-build
+```
+
+Status / stop:
+
+```bash
+./scripts/status-state-017-cdm-lifecycle-mapping-generated.sh
+./scripts/stop-state-017-cdm-lifecycle-mapping-generated.sh
+```
+
+Grafana access:
+
+- Public dashboards: `http://localhost:8080/grafana/`
+- Local admin URL: `http://localhost:3001`
+- The start script prints the active local admin credential.
+- Default convention: user from `TRADERX_GRAFANA_ADMIN_USER` or `traderx-admin`; password from `TRADERX_GRAFANA_ADMIN_PASSWORD` or `traderx-state-017`.
+EOF
+      ;;
     010-kubernetes-runtime)
       cat > "${TARGET_ROOT}/RUN_FROM_GENERATED.md" <<'EOF'
 # Run From Generated (State 010)
@@ -967,7 +1002,7 @@ EOF
 - Tempo: `http://localhost:3200`
 EOF
       ;;
-    009-order-management-matcher)
+    009-order-management-matcher|017-cdm-lifecycle-mapping)
       cat <<'EOF'
 - UI (ingress): `http://localhost:8080`
 - API explorer (ingress): `http://localhost:8080/api/docs`

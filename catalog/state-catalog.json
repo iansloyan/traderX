@@ -49,6 +49,12 @@
         "name": "Order Matcher",
         "detectPath": "order-matcher",
         "runtimeSpecPath": "/order-matcher/v3/api-docs"
+      },
+      {
+        "id": "cdm-service",
+        "name": "CDM Service",
+        "detectPath": "cdm-service",
+        "contractPath": "specs/017-cdm-lifecycle-mapping/contracts/cdm-service/openapi.yaml"
       }
     ]
   },
@@ -394,6 +400,32 @@
       "publish": {
         "branch": "code/generated-state-014-fdc3-intent-interoperability",
         "tag": "generated/014-fdc3-intent-interoperability/v1"
+      }
+    },
+    {
+      "id": "017-cdm-lifecycle-mapping",
+      "title": "CDM Lifecycle, Party and Security Model",
+      "status": "implemented",
+      "track": "functional",
+      "convergenceLevel": "none",
+      "isConvergence": false,
+      "dottedParents": [],
+      "primaryLineageRole": "optional",
+      "featurePack": "specs/017-cdm-lifecycle-mapping",
+      "previous": [
+        "009-order-management-matcher"
+      ],
+      "generation": {
+        "mode": "planned",
+        "entrypoint": "bash pipeline/generate-state.sh 017-cdm-lifecycle-mapping",
+        "runtime": "./scripts/start-state-017-cdm-lifecycle-mapping-generated.sh"
+      },
+      "publish": {
+        "branch": "code/generated-state-017-cdm-lifecycle-mapping",
+        "tag": "generated/017-cdm-lifecycle-mapping/v1"
+      },
+      "deploy": {
+        "enabled": false
       }
     }
   ]

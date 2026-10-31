@@ -1,0 +1,44 @@
+# rsync exclude patterns applied by pipeline/create-state-patchset.sh when
+# capturing the 017 patch set. Paths are relative to generated/code/target-generated/.
+#
+# cdm-service/ is owned by generation/runtime-overrides/cdm-service/ and copied
+# in by pipeline/render-state-017-cdm-lifecycle-mapping.sh; it must never be
+# captured into 0001-state-overlay.patch.
+/cdm-service/
+
+# The ingress template is edited only by the 017 render script (the
+# /cdm-service/ route, Ruling R9). Capturing it would put that route into the
+# patch, whose context does not match the nested-generation ingress file.
+/ingress/nginx.traderx.conf.template
+
+# Installer-owned outputs that pipeline/generate-state.sh rewrites for the
+# target state on every generation (timestamps, state id, runtime harness, CI
+# assets). The parent snapshot holds the 009 versions and an in-place-edited 017
+# tree holds the 017 versions, so capturing them only records generation noise.
+/api-explorer/catalog.json
+/ingress/api-explorer/catalog.json
+/web-front-end/angular/main/assets/state-ui.json
+/.github/
+/ci/state-metadata.json
+/runtime/deploy/
+/runtime/ghcr/
+/scripts/
+/AGENTS.md
+/ARCHITECTURE.md
+/CONTRIBUTING.md
+/RUN_FROM_GENERATED.md
+/start-env.sh
+/status-env.sh
+/stop-env.sh
+/test-env.sh
+
+# npm lockfiles are owned by pipeline/refresh-generated-node-lockfiles.sh, which
+# re-resolves them against the registry at generation time. Capturing them
+# records registry drift between the parent and child generations, which then
+# fails to apply. (yarn.lock / pnpm-lock.yaml are already excluded globally.)
+package-lock.json
+
+# Installer-owned deployment catalog (rewritten from catalog/ on every generation) and local
+# test output (Karma junit results from `ng test`): neither is state content.
+/ci/deployment-catalog.json
+/web-front-end/angular/.test-results/

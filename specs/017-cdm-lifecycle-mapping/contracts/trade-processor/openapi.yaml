@@ -1,0 +1,82 @@
+openapi: 3.0.1
+info:
+  title: "Trade Processor - TraderX"
+  version: "1.0"
+paths:
+  /tradeservice/order:
+    post:
+      operationId: processOrder
+      responses:
+        '200':
+          description: Trade booking result
+  /:
+    get:
+      operationId: docsRoot
+      responses:
+        '302':
+          description: Redirect to OpenAPI docs
+components:
+  schemas:
+    TradeOrder:
+      type: object
+      properties:
+        id:
+          type: string
+        accountId:
+          type: integer
+          format: int32
+        security:
+          type: string
+        side:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        orderId:
+          type: string
+          nullable: true
+          description: Optional (state 017). Order-matcher order id for an order fill; absent for direct trades.
+    Position:
+      type: object
+      properties:
+        accountId:
+          type: integer
+          format: int32
+        security:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+    Trade:
+      type: object
+      properties:
+        id:
+          type: string
+        accountId:
+          type: integer
+          format: int32
+        security:
+          type: string
+        side:
+          type: string
+        state:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        orderId:
+          type: string
+          nullable: true
+          description: State 017. Order-matcher order id for an order fill, null for a direct trade. Always present on the wire (also on /accounts/<accountId>/trades and /trades/booked).
+          example: ord-013-0001
+        cdmRef:
+          type: string
+          nullable: true
+          description: Optional (state 017). Derived reference of the CDM TradeState, `cdm:trade:<id>`; not persisted.
+    TradeBookingResult:
+      type: object
+      properties:
+        trade:
+          $ref: '#/components/schemas/Trade'
+        position:
+          $ref: '#/components/schemas/Position'
