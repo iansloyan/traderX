@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.util.RawValue;
 import com.rosetta.model.lib.RosettaModelObject;
 import finos.traderx.cdmservice.lifecycle.ExecutionMapper;
 import finos.traderx.cdmservice.lifecycle.WorkflowMapper;
+import finos.traderx.cdmservice.lifecycle.CdmLifecycle;
 import finos.traderx.cdmservice.ref.CdmRef;
 import finos.traderx.cdmservice.security.SecurityMapper;
 import finos.traderx.cdmservice.store.CdmStore;
@@ -48,12 +49,14 @@ final class CdmApiSupport {
 
   /** {@code executionTypeMeaning} of a matcher fill's (or a trade's) {@code OnVenue}. */
   static final String ON_VENUE_EXECUTED =
-      "Executed by the TraderX matching engine (the venue, Party2)";
+      "Executed on the TraderX matching engine (the venue, execution facility)";
   /** {@code executionTypeMeaning} of an order proposal's {@code OnVenue}: nothing executed yet. */
-  static final String ON_VENUE_SENT = "Sent to the TraderX matching engine (the venue, Party2)";
-  /** {@code executionTypeMeaning} of a direct trade's {@code Electronic}. */
-  static final String ELECTRONIC_BOOKED =
-      "Booked electronically from the trade ticket, not matched";
+  static final String ON_VENUE_SENT =
+      "Sent to the TraderX matching engine (the venue, execution facility)";
+  /** {@code executionTypeMeaning} of a direct trade's {@code OffFacility}. */
+  static final String OFF_FACILITY_BOOKED =
+      "Booked bilaterally between the TraderX subsidiary and the client from the trade ticket,"
+          + " with no venue";
 
   private final CdmStore store;
   private final ObjectMapper cdmObjectMapper;
@@ -220,8 +223,8 @@ final class CdmApiSupport {
     if (type == ExecutionTypeEnum.ON_VENUE) {
       return proposal ? ON_VENUE_SENT : ON_VENUE_EXECUTED;
     }
-    if (type == ExecutionTypeEnum.ELECTRONIC) {
-      return ELECTRONIC_BOOKED;
+    if (type == ExecutionTypeEnum.OFF_FACILITY) {
+      return OFF_FACILITY_BOOKED;
     }
     return null;
   }
@@ -302,8 +305,9 @@ final class CdmApiSupport {
   /**
    * {@link #tradeStateSummary} plus what a trade page shows first: {@code tradeId},
    * {@code previousStoreGlobalKey}, {@code quantity}, {@code price}, {@code side} (the account's),
-   * {@code account} and {@code venue} ({@code cdmRef}, name), {@code security} ({@code cdmRef},
-   * ticker).
+   * {@code account} (the client, {@code Party2}), {@code dealer} (the facing TraderX subsidiary,
+   * {@code Party1}) and {@code venue} (the execution facility; null for a direct trade), each
+   * {@code cdmRef} and name, and {@code security} ({@code cdmRef}, ticker).
    */
   ObjectNode tradeStateDetail(StoredCdm stored) {
     ObjectNode node = (ObjectNode) tradeStateSummary(stored);
@@ -319,12 +323,13 @@ final class CdmApiSupport {
       node.put("quantity", quantity);
     }
     node.put("price", price(pq));
-    String account = counterparty(trade, CounterpartyRoleEnum.PARTY_1);
+    String account = counterparty(trade, CdmLifecycle.CLIENT);
     String buyer = role(trade, PartyRoleEnum.BUYER);
     node.put("side", account == null || buyer == null ? null
         : account.equals(buyer) ? "Buy" : "Sell");
     node.set("account", partyNode(trade, account));
-    node.set("venue", partyNode(trade, counterparty(trade, CounterpartyRoleEnum.PARTY_2)));
+    node.set("dealer", partyNode(trade, counterparty(trade, CdmLifecycle.DEALER)));
+    node.set("venue", partyNode(trade, role(trade, PartyRoleEnum.EXECUTION_FACILITY)));
     node.set("security", securityNode(trade));
     return node;
   }

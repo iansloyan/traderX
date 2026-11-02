@@ -149,7 +149,7 @@ public final class ExecutionMapper {
     }
     ExecutionInstruction ordered = requireProposal(orderProposal, trade);
     WorkflowStep proposed = workflow.proposedStep(
-        tradeInstruction(trade, ExecutionTypeEnum.ON_VENUE), trade.created(),
+        tradeInstruction(trade, ExecutionTypeEnum.ON_VENUE, true), trade.created(),
         List.of(CdmLifecycle.identifier(trade.orderId(), ORDER_ID_SCHEME, 1),
             CdmLifecycle.identifier(trade.id(), FILL_ID_SCHEME, 1)),
         trade.id());
@@ -158,8 +158,9 @@ public final class ExecutionMapper {
 
   /**
    * A direct trade (trade ticket, no order) as its own workflow: the trade proposed as an
-   * instruction (execution type {@code Electronic}, event identifier the trade id) and accepted
-   * with its execution event.
+   * instruction (execution type {@code OffFacility}: a bilateral booking between the dealer and
+   * the client, with no venue; event identifier the trade id) and accepted with its execution
+   * event.
    */
   public FillWorkflow direct(BookedTrade trade) {
     requireTrade(trade);
@@ -168,22 +169,24 @@ public final class ExecutionMapper {
           + trade.orderId() + "; it is not a direct trade");
     }
     WorkflowStep proposed = workflow.proposedStep(
-        tradeInstruction(trade, ExecutionTypeEnum.ELECTRONIC), trade.created(),
+        tradeInstruction(trade, ExecutionTypeEnum.OFF_FACILITY, false), trade.created(),
         List.of(CdmLifecycle.identifier(trade.id(), TRADE_ID_SCHEME, 1)), trade.id());
     return new FillWorkflow(proposed, accept(proposed, trade), List.of());
   }
 
   /**
    * The trade as booked, as an execution instruction: its quantity at its price (with the gross
-   * consideration), the account against the venue, identified by the trade id.
+   * consideration), the dealer facing the account against the account, with the venue as
+   * execution facility if {@code onVenue}, identified by the trade id.
    */
   private ExecutionInstruction tradeInstruction(BookedTrade trade,
-      ExecutionTypeEnum executionType) {
+      ExecutionTypeEnum executionType, boolean onVenue) {
     Side side = CdmLifecycle.requireSide(trade.side());
     return CdmLifecycle.executionInstruction(
         products.cashEquity(CdmLifecycle.requireSecurity(referenceData, trade.security()), side),
         side, CdmLifecycle.requireAccount(referenceData, trade.accountId()),
-        referenceData.venue(), CdmProducts.priceQuantity(trade.price(), trade.quantity(), true),
+        referenceData.dealer(trade.accountId()), onVenue ? referenceData.venue() : null,
+        CdmProducts.priceQuantity(trade.price(), trade.quantity(), true),
         trade.created(), List.of(CdmLifecycle.tradeIdentifier(trade.id(), TRADE_ID_SCHEME)),
         executionType);
   }
@@ -315,11 +318,8 @@ public final class ExecutionMapper {
   /** How {@code trade} differs from the order's instruction: side, security, account. */
   private static List<String> mismatches(ExecutionInstruction ordered, BookedTrade trade) {
     List<String> mismatches = new ArrayList<>();
-    String account = ordered.getCounterparty().stream()
-        .filter(c -> c.getRole() == CounterpartyRoleEnum.PARTY_1)
-        .map(Counterparty::getPartyReference)
-        .map(r -> r.getExternalReference())
-        .findFirst().orElse(null);
+    String account = CdmLifecycle.counterpartyKey(ordered.getCounterparty(),
+        CdmLifecycle.CLIENT);
     if (!Integer.toString(trade.accountId()).equals(account)) {
       mismatches.add(MISMATCH_PREFIX + "account " + trade.accountId() + " but the order's is "
           + account);

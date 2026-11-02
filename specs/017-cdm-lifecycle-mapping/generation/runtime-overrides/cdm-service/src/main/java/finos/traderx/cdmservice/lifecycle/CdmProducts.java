@@ -62,8 +62,8 @@ public final class CdmProducts {
 
   /**
    * The cash-equity product on {@code security}, built with CDM's
-   * {@code Create_NonTransferableProduct}. The account is {@code Party1} and the venue
-   * {@code Party2}; the seller delivers the shares, so the payer of the settlement payout is the
+   * {@code Create_NonTransferableProduct}. The dealer is {@code Party1} and the client (the
+   * account) {@code Party2}; the seller delivers the shares, so the payer of the settlement payout is the
    * seller and the receiver the buyer. With no side (a rejected request without one) the
    * payer/receiver is left out and the product does not validate, which is reported, not hidden.
    */
@@ -74,10 +74,8 @@ public final class CdmProducts {
                 .setInstrument(Instrument.builder().setSecurity(security))))
         .build();
     PayerReceiver payerReceiver = accountSide == null ? null : PayerReceiver.builder()
-        .setPayer(accountSide == Side.SELL ? CounterpartyRoleEnum.PARTY_1
-            : CounterpartyRoleEnum.PARTY_2)
-        .setReceiver(accountSide == Side.SELL ? CounterpartyRoleEnum.PARTY_2
-            : CounterpartyRoleEnum.PARTY_1)
+        .setPayer(accountSide == Side.SELL ? CdmLifecycle.CLIENT : CdmLifecycle.DEALER)
+        .setReceiver(accountSide == Side.SELL ? CdmLifecycle.DEALER : CdmLifecycle.CLIENT)
         .build();
     NonTransferableProduct.NonTransferableProductBuilder product =
         createProduct.evaluate(underlier, payerReceiver).toBuilder();

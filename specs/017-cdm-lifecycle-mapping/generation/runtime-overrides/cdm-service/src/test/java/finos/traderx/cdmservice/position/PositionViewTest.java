@@ -95,11 +95,11 @@ class PositionViewTest {
     return position.getPriceQuantity().get(0).getQuantity().getValue().getValue().intValueExact();
   }
 
-  /** The account's side of the position's product: receiver (long) or payer (short). */
+  /** The account's (Party2's) side of the position's product: receiver (long) or payer (short). */
   private static int sign(Position position) {
     var payerReceiver = position.getProduct().getNonTransferableProduct().getEconomicTerms()
         .getPayout().get(0).getSettlementPayout().getPayerReceiver();
-    return payerReceiver.getReceiver() == CounterpartyRoleEnum.PARTY_1 ? 1 : -1;
+    return payerReceiver.getReceiver() == CounterpartyRoleEnum.PARTY_2 ? 1 : -1;
   }
 
   @Test

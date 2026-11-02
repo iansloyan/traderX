@@ -10,8 +10,8 @@
               "payout" : [ {
                 "SettlementPayout" : {
                   "payerReceiver" : {
-                    "payer" : "Party2",
-                    "receiver" : "Party1"
+                    "payer" : "Party1",
+                    "receiver" : "Party2"
                   },
                   "settlementTerms" : {
                     "settlementType" : "Physical",
@@ -45,7 +45,7 @@
                     }
                   },
                   "meta" : {
-                    "globalKey" : "427e7d52"
+                    "globalKey" : "64d382b4"
                   },
                   "underlier" : {
                     "Observable" : {
@@ -95,7 +95,7 @@
               } ]
             },
             "meta" : {
-              "globalKey" : "427e7d52"
+              "globalKey" : "64d382b4"
             }
           },
           "priceQuantity" : [ {
@@ -129,15 +129,34 @@
           "counterparty" : [ {
             "role" : "Party1",
             "partyReference" : {
-              "externalReference" : "22214"
+              "externalReference" : "traderx-nyc"
             }
           }, {
             "role" : "Party2",
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "22214"
             }
           } ],
           "parties" : [ {
+            "partyId" : [ {
+              "identifier" : {
+                "value" : "traderx-nyc",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/entity-id"
+                }
+              },
+              "meta" : {
+                "globalKey" : "aa47f255"
+              }
+            } ],
+            "name" : {
+              "value" : "TraderX NYC"
+            },
+            "meta" : {
+              "globalKey" : "43fcf637",
+              "externalKey" : "traderx-nyc"
+            }
+          }, {
             "partyId" : [ {
               "identifier" : {
                 "value" : "22214",
@@ -183,9 +202,24 @@
             "role" : "Buyer"
           }, {
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "traderx-nyc"
             },
             "role" : "Seller"
+          }, {
+            "partyReference" : {
+              "externalReference" : "22214"
+            },
+            "role" : "Client"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-nyc"
+            },
+            "role" : "ExecutingEntity"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-nyc"
+            },
+            "role" : "BookingParty"
           }, {
             "partyReference" : {
               "externalReference" : "traderx-matching-engine"
@@ -260,7 +294,7 @@
     } ]
   },
   "previousWorkflowStep" : {
-    "globalReference" : "215028ba",
+    "globalReference" : "2bf7f563",
     "externalReference" : "ord-013-0101:approved"
   },
   "timestamp" : [ {
@@ -290,7 +324,7 @@
     "comment" : "Unfilled remainder of 750 shares cancelled; 750 executed by fills, which stand"
   },
   "meta" : {
-    "globalKey" : "701cc141",
+    "globalKey" : "3c71a42a",
     "externalKey" : "ord-013-0101:cancel"
   }
 }

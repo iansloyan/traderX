@@ -58,7 +58,7 @@ import org.springframework.stereotype.Component;
 /**
  * An account's positions derived from the stored CDM {@link TradeState}s: every trade state
  * under a {@code cdm:trade:<tradeId>} ref (order fills and direct trades alike, one trade per
- * fill) whose {@code Party1} counterparty is the account. Nothing is stored: the view is
+ * fill) whose client counterparty ({@code Party2}) is the account. Nothing is stored: the view is
  * computed on read, so it always reflects the latest trade states.
  *
  * <p><b>Quantity.</b> Each trade counts its trade lot quantity, plus when the account is the
@@ -266,7 +266,7 @@ public class PositionView {
       if (state == null) {
         // Unreadable: the account is unknown, so it is listed for every account.
         skipped.add(new Skipped(stored.ref().toString(), "stored TradeState is unreadable"));
-      } else if (state.getTrade() != null && account.equals(party1(state.getTrade()))) {
+      } else if (state.getTrade() != null && account.equals(client(state.getTrade()))) {
         mine.add(new Read(stored, state));
       }
     }
@@ -356,13 +356,9 @@ public class PositionView {
     }
   }
 
-  private static String party1(Trade trade) {
-    return trade.getCounterparty() == null ? null : trade.getCounterparty().stream()
-        .filter(c -> c.getRole() == CounterpartyRoleEnum.PARTY_1)
-        .map(Counterparty::getPartyReference)
-        .filter(Objects::nonNull)
-        .map(r -> r.getExternalReference())
-        .findFirst().orElse(null);
+  private static String client(Trade trade) {
+    return finos.traderx.cdmservice.lifecycle.CdmLifecycle.counterpartyKey(
+        trade.getCounterparty(), finos.traderx.cdmservice.lifecycle.CdmLifecycle.CLIENT);
   }
 
   private static String role(Trade trade, PartyRoleEnum role) {

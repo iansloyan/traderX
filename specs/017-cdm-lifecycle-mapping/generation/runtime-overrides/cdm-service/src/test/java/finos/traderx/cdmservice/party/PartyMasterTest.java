@@ -99,8 +99,9 @@ class PartyMasterTest {
         new AccountUserProjection(22214, "user03", "cdm:person:user03"),
         new AccountUserProjection(52355, "user09", "cdm:person:user09"));
 
-    // 2 account parties + the venue party + one NaturalPerson per people.json entry.
-    assertThat(repository.count()).isEqualTo(2 + 1 + SEED_PERSONS);
+    // 2 account parties + 3 subsidiaries + the venue party + one NaturalPerson per people.json
+    // entry.
+    assertThat(repository.count()).isEqualTo(2 + 3 + 1 + SEED_PERSONS);
     StoredCdm stored = store.latest(new CdmRef(CdmRef.Kind.PARTY, "22214"), Party.class).orElseThrow();
     assertThat(stored.cdmType()).isEqualTo("cdm.base.staticdata.party.Party");
     assertThat(stored.validation())
@@ -447,5 +448,61 @@ class PartyMasterTest {
     long rows = repository.count();
     assertThat(newMaster(store).seedIfEmpty(dataSource)).isTrue();
     assertThat(repository.count()).isEqualTo(rows);
+  }
+
+  @Test
+  void seedStoresSubsidiariesAndAssignsEachAccountItsFacingSubsidiary() {
+    PartyMaster master = seeded();
+
+    assertThat(master.entities()).extracting(p -> p.getMeta().getExternalKey())
+        .containsExactly("traderx-nyc", "traderx-ldn", "traderx-tky");
+    assertThat(master.entity("traderx-ldn").orElseThrow().getName().getValue())
+        .isEqualTo("TraderX LDN");
+    assertThat(PartyMapper.isEntity(master.entity("traderx-tky").orElseThrow())).isTrue();
+    assertThat(store.latest(new CdmRef(CdmRef.Kind.PARTY, "traderx-nyc"), Party.class))
+        .isPresent();
+    // Account parties carry their CDM Account, serviced by the seeded subsidiary.
+    Party account = master.findParty(52355).orElseThrow();
+    assertThat(account.getAccount().getAccountNumber().getValue()).isEqualTo("52355");
+    assertThat(account.getAccount().getAccountName().getValue()).isEqualTo("Big Corporate Fund");
+    assertThat(account.getAccount().getAccountType().getValue())
+        .isEqualTo(cdm.base.staticdata.party.AccountTypeEnum.CLIENT);
+    assertThat(PartyMapper.servicingEntity(account)).contains("traderx-nyc");
+    assertThat(master.facingEntity(52355).getMeta().getExternalKey()).isEqualTo("traderx-nyc");
+    // The subsidiaries are not accounts.
+    assertThat(master.accounts()).extracting(AccountProjection::id).containsExactly(22214, 52355);
+  }
+
+  @Test
+  void servicingEntityCanBeSwitchedAndUnknownOnesAreRejected() {
+    PartyMaster master = seeded();
+
+    master.setServicingEntity(22214, "traderx-ldn");
+
+    assertThat(master.facingEntity(22214).getMeta().getExternalKey()).isEqualTo("traderx-ldn");
+    Party stored = readParty("22214");
+    assertThat(PartyMapper.servicingEntity(stored)).contains("traderx-ldn");
+    // Users and name are kept.
+    assertThat(master.relatedPersons(22214)).containsExactly("user01", "user03");
+    assertThat(stored.getName().getValue()).isEqualTo("Test Account 20");
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+        () -> master.setServicingEntity(22214, "traderx-par"))
+        .isInstanceOf(PartyMaster.UnknownEntityException.class);
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+        () -> master.setServicingEntity(99999, "traderx-ldn"))
+        .isInstanceOf(PartyMaster.UnknownAccountException.class);
+    // Renaming the account keeps the facing subsidiary.
+    master.updateAccount(22214, "Renamed");
+    assertThat(master.facingEntity(22214).getMeta().getExternalKey()).isEqualTo("traderx-ldn");
+  }
+
+  private Party readParty(String key) {
+    try {
+      return cdmObjectMapper.readValue(store.latest(new CdmRef(CdmRef.Kind.PARTY, key), Party.class)
+          .orElseThrow().json(), Party.class);
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
   }
 }

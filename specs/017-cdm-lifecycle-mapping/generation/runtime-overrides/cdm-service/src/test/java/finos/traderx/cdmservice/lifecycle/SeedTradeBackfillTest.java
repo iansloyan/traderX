@@ -77,6 +77,11 @@ class SeedTradeBackfillTest {
     }
 
     @Override
+    public Party dealer(int accountId) {
+      return LifecycleFixtures.NYC;
+    }
+
+    @Override
     public Party venue() {
       return PartyMapper.venueParty();
     }

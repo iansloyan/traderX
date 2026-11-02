@@ -1,5 +1,7 @@
 package finos.traderx.cdmservice.party;
 
+import cdm.base.staticdata.party.Account;
+import cdm.base.staticdata.party.AccountTypeEnum;
 import cdm.base.staticdata.party.ContactInformation;
 import cdm.base.staticdata.party.NaturalPerson;
 import cdm.base.staticdata.party.NaturalPersonRole;
@@ -10,6 +12,7 @@ import cdm.base.staticdata.party.PersonIdentifier;
 import cdm.base.staticdata.party.PersonIdentifierTypeEnum;
 import cdm.base.staticdata.party.metafields.FieldWithMetaPersonIdentifier;
 import cdm.base.staticdata.party.metafields.ReferenceWithMetaNaturalPerson;
+import cdm.base.staticdata.party.metafields.ReferenceWithMetaParty;
 import com.rosetta.model.metafields.FieldWithMetaString;
 import com.rosetta.model.metafields.MetaFields;
 import finos.traderx.cdmservice.ref.CdmRef;
@@ -25,7 +28,13 @@ import java.util.Optional;
  * <ul>
  *   <li><b>Account</b> = {@link Party} with one {@link PartyIdentifier} (the account id, scheme
  *       {@link #ACCOUNT_ID_SCHEME}), {@code name} = display name and {@code meta.externalKey} =
- *       account id.</li>
+ *       account id. Its {@code account} ({@link Account}) has the account id as
+ *       {@code accountNumber}, the display name as {@code accountName}, type {@code Client}, and
+ *       as {@code servicingParty} the TraderX subsidiary that faces the client (by external key),
+ *       so the facing entity is recorded in CDM's own field.</li>
+ *   <li><b>Subsidiary</b> = {@link Party} for each TraderX group entity that faces clients
+ *       ({@link EntitySeed}), identified under {@link #ENTITY_ID_SCHEME}; the dealer side of every
+ *       order and trade.</li>
  *   <li><b>Account user</b> = an identifier-only person ({@link #identifiedPerson}: logon id
  *       identifier and external key) in {@code Party.person} plus a {@code Party.personRole}
  *       ({@link NaturalPersonRole}) whose {@code personReference} is the person's external key
@@ -48,6 +57,7 @@ public final class PartyMapper {
   public static final String LOGON_ID_SCHEME = "https://traderx.finos.org/logon-id";
   public static final String DEPARTMENT_SCHEME = "https://traderx.finos.org/department";
   public static final String PHOTO_URL_SCHEME = "https://traderx.finos.org/photo-url";
+  public static final String ENTITY_ID_SCHEME = "https://traderx.finos.org/entity-id";
   public static final String VENUE_ID_SCHEME = "https://traderx.finos.org/venue-id";
   public static final String VENUE_KEY = "traderx-matching-engine";
   public static final String VENUE_NAME = "TraderX Matching Engine";
@@ -63,6 +73,10 @@ public final class PartyMapper {
     return new CdmRef(CdmRef.Kind.PARTY, VENUE_KEY);
   }
 
+  public static CdmRef entityRef(String entityKey) {
+    return new CdmRef(CdmRef.Kind.PARTY, entityKey);
+  }
+
   public static CdmRef personRef(String logonId) {
     return new CdmRef(CdmRef.Kind.PERSON, logonId);
   }
@@ -72,8 +86,17 @@ public final class PartyMapper {
     return toCdmParty(accountId, displayName, List.of());
   }
 
-  /** The account party with {@code persons} related to it as traders. */
+  /** The account party with {@code persons} related to it as traders and no servicing entity. */
   public static Party toCdmParty(int accountId, String displayName, List<NaturalPerson> persons) {
+    return toCdmParty(accountId, displayName, persons, null);
+  }
+
+  /**
+   * The account party with {@code persons} related to it as traders and, if
+   * {@code servicingEntity} is given, its {@link Account} serviced by that subsidiary.
+   */
+  public static Party toCdmParty(int accountId, String displayName, List<NaturalPerson> persons,
+      String servicingEntity) {
     String key = Integer.toString(accountId);
     Party.PartyBuilder party = Party.builder()
         .addPartyId(PartyIdentifier.builder()
@@ -92,7 +115,53 @@ public final class PartyMapper {
               .setExternalReference(logonId(person)))
           .addRoleValue(NaturalPersonRoleEnum.TRADER));
     }
+    if (servicingEntity != null) {
+      party.setAccount(account(key, displayName, servicingEntity));
+    }
     return party.build();
+  }
+
+  /** {@code party} (an account party) serviced by {@code servicingEntity}. */
+  public static Party withServicingEntity(Party party, String servicingEntity) {
+    String name = party.getName() == null ? null : party.getName().getValue();
+    return party.toBuilder()
+        .setAccount(account(Integer.toString(accountId(party)), name, servicingEntity))
+        .build();
+  }
+
+  /** The external key of the subsidiary servicing an account party, if it has one. */
+  public static Optional<String> servicingEntity(Party party) {
+    return Optional.ofNullable(party)
+        .map(Party::getAccount)
+        .map(Account::getServicingParty)
+        .map(ReferenceWithMetaParty::getExternalReference);
+  }
+
+  private static Account account(String accountId, String displayName, String servicingEntity) {
+    Account.AccountBuilder account = Account.builder()
+        .setAccountNumber(schemed(accountId, ACCOUNT_ID_SCHEME))
+        .setAccountTypeValue(AccountTypeEnum.CLIENT)
+        .setServicingParty(ReferenceWithMetaParty.builder()
+            .setExternalReference(servicingEntity));
+    if (displayName != null) {
+      account.setAccountNameValue(displayName);
+    }
+    return account.build();
+  }
+
+  /** A TraderX group subsidiary as a party (TraderX scheme only, no LEI). */
+  public static Party entityParty(EntitySeed.Entity entity) {
+    return Party.builder()
+        .addPartyId(PartyIdentifier.builder()
+            .setIdentifier(schemed(entity.key(), ENTITY_ID_SCHEME)))
+        .setName(FieldWithMetaString.builder().setValue(entity.name()))
+        .setMeta(MetaFields.builder().setExternalKey(entity.key()))
+        .build();
+  }
+
+  /** True for a party that represents a TraderX group subsidiary. */
+  public static boolean isEntity(Party party) {
+    return partyIdentifier(party, ENTITY_ID_SCHEME).isPresent();
   }
 
   /** The execution venue (the TraderX order matcher) as a party. */

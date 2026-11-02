@@ -473,19 +473,20 @@ class LineageControllerTest {
     JsonNode lineage = json("/cdm/orders/" + ORDER_ID + "/lineage");
     assertThat(lineage.at("/proposal/executionType").asText()).isEqualTo("OnVenue");
     assertThat(lineage.at("/proposal/executionTypeMeaning").asText())
-        .isEqualTo("Sent to the TraderX matching engine (the venue, Party2)");
+        .isEqualTo("Sent to the TraderX matching engine (the venue, execution facility)");
     assertThat(lineage.at("/fills/0/executionType").asText()).isEqualTo("OnVenue");
     assertThat(lineage.at("/fills/0/executionTypeMeaning").asText())
-        .isEqualTo("Executed by the TraderX matching engine (the venue, Party2)");
+        .isEqualTo("Executed on the TraderX matching engine (the venue, execution facility)");
 
     JsonNode fill = json("/cdm/trades/trd-017-0001");
     assertThat(fill.at("/executionType").asText()).isEqualTo("OnVenue");
     assertThat(fill.at("/executionTypeMeaning").asText())
-        .isEqualTo("Executed by the TraderX matching engine (the venue, Party2)");
+        .isEqualTo("Executed on the TraderX matching engine (the venue, execution facility)");
     JsonNode direct = json("/cdm/trades/trd-017-0100");
-    assertThat(direct.at("/executionType").asText()).isEqualTo("Electronic");
+    assertThat(direct.at("/executionType").asText()).isEqualTo("OffFacility");
     assertThat(direct.at("/executionTypeMeaning").asText())
-        .isEqualTo("Booked electronically from the trade ticket, not matched");
+        .isEqualTo("Booked bilaterally between the TraderX subsidiary and the client from the trade"
+            + " ticket, with no venue");
   }
 
   // --- trades --------------------------------------------------------------------------------

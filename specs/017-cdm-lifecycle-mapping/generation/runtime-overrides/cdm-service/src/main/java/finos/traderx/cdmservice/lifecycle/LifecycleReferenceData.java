@@ -18,6 +18,12 @@ public interface LifecycleReferenceData {
   /** The account party (as stored: it may embed identifier-only persons). */
   Optional<Party> account(int accountId);
 
+  /**
+   * The TraderX subsidiary facing account {@code accountId} (the dealer, {@code Party1}): the
+   * account's {@code servicingParty}, or the seed assignment for an unknown account.
+   */
+  Party dealer(int accountId);
+
   /** The execution venue party (the TraderX order matcher). */
   Party venue();
 
@@ -32,6 +38,11 @@ public interface LifecycleReferenceData {
       @Override
       public Optional<Party> account(int accountId) {
         return parties.findParty(accountId);
+      }
+
+      @Override
+      public Party dealer(int accountId) {
+        return parties.facingEntity(accountId);
       }
 
       @Override

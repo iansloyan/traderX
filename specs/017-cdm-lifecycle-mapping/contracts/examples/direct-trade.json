@@ -10,8 +10,8 @@
               "payout" : [ {
                 "SettlementPayout" : {
                   "payerReceiver" : {
-                    "payer" : "Party1",
-                    "receiver" : "Party2"
+                    "payer" : "Party2",
+                    "receiver" : "Party1"
                   },
                   "settlementTerms" : {
                     "settlementType" : "Physical",
@@ -45,7 +45,7 @@
                     }
                   },
                   "meta" : {
-                    "globalKey" : "64d382b4"
+                    "globalKey" : "427e7d52"
                   },
                   "underlier" : {
                     "Observable" : {
@@ -95,7 +95,7 @@
               } ]
             },
             "meta" : {
-              "globalKey" : "64d382b4"
+              "globalKey" : "427e7d52"
             }
           },
           "priceQuantity" : [ {
@@ -137,15 +137,34 @@
           "counterparty" : [ {
             "role" : "Party1",
             "partyReference" : {
-              "externalReference" : "22214"
+              "externalReference" : "traderx-nyc"
             }
           }, {
             "role" : "Party2",
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "22214"
             }
           } ],
           "parties" : [ {
+            "partyId" : [ {
+              "identifier" : {
+                "value" : "traderx-nyc",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/entity-id"
+                }
+              },
+              "meta" : {
+                "globalKey" : "aa47f255"
+              }
+            } ],
+            "name" : {
+              "value" : "TraderX NYC"
+            },
+            "meta" : {
+              "globalKey" : "43fcf637",
+              "externalKey" : "traderx-nyc"
+            }
+          }, {
             "partyId" : [ {
               "identifier" : {
                 "value" : "22214",
@@ -164,29 +183,10 @@
               "globalKey" : "ca8123b4",
               "externalKey" : "22214"
             }
-          }, {
-            "partyId" : [ {
-              "identifier" : {
-                "value" : "traderx-matching-engine",
-                "meta" : {
-                  "scheme" : "https://traderx.finos.org/venue-id"
-                }
-              },
-              "meta" : {
-                "globalKey" : "fe4754ef"
-              }
-            } ],
-            "name" : {
-              "value" : "TraderX Matching Engine"
-            },
-            "meta" : {
-              "globalKey" : "967c9f3e",
-              "externalKey" : "traderx-matching-engine"
-            }
           } ],
           "partyRoles" : [ {
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "traderx-nyc"
             },
             "role" : "Buyer"
           }, {
@@ -196,34 +196,24 @@
             "role" : "Seller"
           }, {
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "22214"
             },
-            "role" : "ExecutionFacility"
+            "role" : "Client"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-nyc"
+            },
+            "role" : "ExecutingEntity"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-nyc"
+            },
+            "role" : "BookingParty"
           } ],
           "executionDetails" : {
-            "executionType" : "Electronic",
-            "executionVenue" : {
-              "name" : {
-                "value" : "TraderX Matching Engine"
-              },
-              "entityIdentifier" : [ {
-                "identifier" : {
-                  "value" : "traderx-matching-engine",
-                  "meta" : {
-                    "scheme" : "https://traderx.finos.org/venue-id"
-                  }
-                },
-                "identifierType" : "Other",
-                "meta" : {
-                  "globalKey" : "cf23cfe1"
-                }
-              } ],
-              "meta" : {
-                "globalKey" : "b038fa70"
-              }
-            },
+            "executionType" : "OffFacility",
             "meta" : {
-              "globalKey" : "4cca3874"
+              "globalKey" : "34596793"
             }
           },
           "tradeDate" : {
@@ -290,7 +280,7 @@
   } ],
   "action" : "New",
   "meta" : {
-    "globalKey" : "42a0b8b1",
+    "globalKey" : "c15a40f6",
     "externalKey" : "trd-017-0100:proposed"
   }
 }, {
@@ -305,8 +295,8 @@
               "payout" : [ {
                 "SettlementPayout" : {
                   "payerReceiver" : {
-                    "payer" : "Party1",
-                    "receiver" : "Party2"
+                    "payer" : "Party2",
+                    "receiver" : "Party1"
                   },
                   "settlementTerms" : {
                     "settlementType" : "Physical",
@@ -340,7 +330,7 @@
                     }
                   },
                   "meta" : {
-                    "globalKey" : "64d382b4"
+                    "globalKey" : "427e7d52"
                   },
                   "underlier" : {
                     "Observable" : {
@@ -390,7 +380,7 @@
               } ]
             },
             "meta" : {
-              "globalKey" : "64d382b4"
+              "globalKey" : "427e7d52"
             }
           },
           "priceQuantity" : [ {
@@ -432,15 +422,34 @@
           "counterparty" : [ {
             "role" : "Party1",
             "partyReference" : {
-              "externalReference" : "22214"
+              "externalReference" : "traderx-nyc"
             }
           }, {
             "role" : "Party2",
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "22214"
             }
           } ],
           "parties" : [ {
+            "partyId" : [ {
+              "identifier" : {
+                "value" : "traderx-nyc",
+                "meta" : {
+                  "scheme" : "https://traderx.finos.org/entity-id"
+                }
+              },
+              "meta" : {
+                "globalKey" : "aa47f255"
+              }
+            } ],
+            "name" : {
+              "value" : "TraderX NYC"
+            },
+            "meta" : {
+              "globalKey" : "43fcf637",
+              "externalKey" : "traderx-nyc"
+            }
+          }, {
             "partyId" : [ {
               "identifier" : {
                 "value" : "22214",
@@ -459,29 +468,10 @@
               "globalKey" : "ca8123b4",
               "externalKey" : "22214"
             }
-          }, {
-            "partyId" : [ {
-              "identifier" : {
-                "value" : "traderx-matching-engine",
-                "meta" : {
-                  "scheme" : "https://traderx.finos.org/venue-id"
-                }
-              },
-              "meta" : {
-                "globalKey" : "fe4754ef"
-              }
-            } ],
-            "name" : {
-              "value" : "TraderX Matching Engine"
-            },
-            "meta" : {
-              "globalKey" : "967c9f3e",
-              "externalKey" : "traderx-matching-engine"
-            }
           } ],
           "partyRoles" : [ {
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "traderx-nyc"
             },
             "role" : "Buyer"
           }, {
@@ -491,34 +481,24 @@
             "role" : "Seller"
           }, {
             "partyReference" : {
-              "externalReference" : "traderx-matching-engine"
+              "externalReference" : "22214"
             },
-            "role" : "ExecutionFacility"
+            "role" : "Client"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-nyc"
+            },
+            "role" : "ExecutingEntity"
+          }, {
+            "partyReference" : {
+              "externalReference" : "traderx-nyc"
+            },
+            "role" : "BookingParty"
           } ],
           "executionDetails" : {
-            "executionType" : "Electronic",
-            "executionVenue" : {
-              "name" : {
-                "value" : "TraderX Matching Engine"
-              },
-              "entityIdentifier" : [ {
-                "identifier" : {
-                  "value" : "traderx-matching-engine",
-                  "meta" : {
-                    "scheme" : "https://traderx.finos.org/venue-id"
-                  }
-                },
-                "identifierType" : "Other",
-                "meta" : {
-                  "globalKey" : "cf23cfe1"
-                }
-              } ],
-              "meta" : {
-                "globalKey" : "b038fa70"
-              }
-            },
+            "executionType" : "OffFacility",
             "meta" : {
-              "globalKey" : "4cca3874"
+              "globalKey" : "34596793"
             }
           },
           "tradeDate" : {
@@ -568,8 +548,8 @@
             "payout" : [ {
               "SettlementPayout" : {
                 "payerReceiver" : {
-                  "payer" : "Party1",
-                  "receiver" : "Party2"
+                  "payer" : "Party2",
+                  "receiver" : "Party1"
                 },
                 "settlementTerms" : {
                   "settlementType" : "Physical",
@@ -603,7 +583,7 @@
                   }
                 },
                 "meta" : {
-                  "globalKey" : "64d382b4"
+                  "globalKey" : "427e7d52"
                 },
                 "underlier" : {
                   "Observable" : {
@@ -653,7 +633,7 @@
             } ]
           },
           "meta" : {
-            "globalKey" : "64d382b4"
+            "globalKey" : "427e7d52"
           }
         },
         "tradeLot" : [ {
@@ -697,12 +677,12 @@
         "counterparty" : [ {
           "role" : "Party1",
           "partyReference" : {
-            "externalReference" : "22214"
+            "externalReference" : "traderx-nyc"
           }
         }, {
           "role" : "Party2",
           "partyReference" : {
-            "externalReference" : "traderx-matching-engine"
+            "externalReference" : "22214"
           }
         } ],
         "tradeIdentifier" : [ {
@@ -731,6 +711,25 @@
         "party" : [ {
           "partyId" : [ {
             "identifier" : {
+              "value" : "traderx-nyc",
+              "meta" : {
+                "scheme" : "https://traderx.finos.org/entity-id"
+              }
+            },
+            "meta" : {
+              "globalKey" : "aa47f255"
+            }
+          } ],
+          "name" : {
+            "value" : "TraderX NYC"
+          },
+          "meta" : {
+            "globalKey" : "43fcf637",
+            "externalKey" : "traderx-nyc"
+          }
+        }, {
+          "partyId" : [ {
+            "identifier" : {
               "value" : "22214",
               "meta" : {
                 "scheme" : "https://traderx.finos.org/account-id"
@@ -747,29 +746,10 @@
             "globalKey" : "ca8123b4",
             "externalKey" : "22214"
           }
-        }, {
-          "partyId" : [ {
-            "identifier" : {
-              "value" : "traderx-matching-engine",
-              "meta" : {
-                "scheme" : "https://traderx.finos.org/venue-id"
-              }
-            },
-            "meta" : {
-              "globalKey" : "fe4754ef"
-            }
-          } ],
-          "name" : {
-            "value" : "TraderX Matching Engine"
-          },
-          "meta" : {
-            "globalKey" : "967c9f3e",
-            "externalKey" : "traderx-matching-engine"
-          }
         } ],
         "partyRole" : [ {
           "partyReference" : {
-            "externalReference" : "traderx-matching-engine"
+            "externalReference" : "traderx-nyc"
           },
           "role" : "Buyer"
         }, {
@@ -779,53 +759,43 @@
           "role" : "Seller"
         }, {
           "partyReference" : {
-            "externalReference" : "traderx-matching-engine"
+            "externalReference" : "22214"
           },
-          "role" : "ExecutionFacility"
+          "role" : "Client"
+        }, {
+          "partyReference" : {
+            "externalReference" : "traderx-nyc"
+          },
+          "role" : "ExecutingEntity"
+        }, {
+          "partyReference" : {
+            "externalReference" : "traderx-nyc"
+          },
+          "role" : "BookingParty"
         } ],
         "executionDetails" : {
-          "executionType" : "Electronic",
-          "executionVenue" : {
-            "name" : {
-              "value" : "TraderX Matching Engine"
-            },
-            "entityIdentifier" : [ {
-              "identifier" : {
-                "value" : "traderx-matching-engine",
-                "meta" : {
-                  "scheme" : "https://traderx.finos.org/venue-id"
-                }
-              },
-              "identifierType" : "Other",
-              "meta" : {
-                "globalKey" : "cf23cfe1"
-              }
-            } ],
-            "meta" : {
-              "globalKey" : "b038fa70"
-            }
-          },
+          "executionType" : "OffFacility",
           "meta" : {
-            "globalKey" : "4cca3874"
+            "globalKey" : "34596793"
           }
         },
         "meta" : {
-          "globalKey" : "b28a10f9"
+          "globalKey" : "82a542aa"
         }
       },
       "state" : {
         "positionState" : "Executed"
       },
       "meta" : {
-        "globalKey" : "e0b59e48"
+        "globalKey" : "16cb27b9"
       }
     } ],
     "meta" : {
-      "globalKey" : "87ed2093"
+      "globalKey" : "886f5113"
     }
   },
   "previousWorkflowStep" : {
-    "globalReference" : "42a0b8b1",
+    "globalReference" : "c15a40f6",
     "externalReference" : "trd-017-0100:proposed"
   },
   "timestamp" : [ {
@@ -854,7 +824,7 @@
     "workflowStatus" : "Accepted"
   },
   "meta" : {
-    "globalKey" : "43da3f83",
+    "globalKey" : "11a0ff03",
     "externalKey" : "trd-017-0100:accepted"
   }
 } ]

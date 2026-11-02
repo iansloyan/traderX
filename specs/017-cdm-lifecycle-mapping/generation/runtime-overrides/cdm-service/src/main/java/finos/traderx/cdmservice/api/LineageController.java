@@ -2,6 +2,8 @@ package finos.traderx.cdmservice.api;
 
 import cdm.base.staticdata.party.Counterparty;
 import cdm.base.staticdata.party.CounterpartyRoleEnum;
+import cdm.base.staticdata.party.PartyRoleEnum;
+import finos.traderx.cdmservice.lifecycle.CdmLifecycle;
 import cdm.base.staticdata.party.Party;
 import cdm.event.common.ExecutionInstruction;
 import cdm.event.common.TradeState;
@@ -209,6 +211,9 @@ public class LineageController {
   private Optional<Party> party(CdmRef ref) {
     if (PartyMapper.VENUE_KEY.equals(ref.key())) {
       return Optional.of(parties.venue());
+    }
+    if (parties.isEntity(ref.key())) {
+      return parties.entity(ref.key());
     }
     return parties.resolvedParty(accountId(ref, ref.key()));
   }
@@ -420,25 +425,35 @@ public class LineageController {
         continue;
       }
       String key = counterparty.getPartyReference().getExternalReference();
-      ObjectNode party = node.putObject(
-          counterparty.getRole() == CounterpartyRoleEnum.PARTY_1 ? "account" : "venue");
+      boolean client = counterparty.getRole() == CdmLifecycle.CLIENT;
+      ObjectNode party = node.putObject(client ? "account" : "dealer");
       party.put("cdmRef", new CdmRef(CdmRef.Kind.PARTY, key).toString());
       party.put("role", counterparty.getRole().toDisplayString());
-      if (counterparty.getRole() == CounterpartyRoleEnum.PARTY_1) {
+      putName(party, ordered, key);
+      if (client) {
         try {
           party.put("accountId", Integer.parseInt(key));
         } catch (NumberFormatException e) {
           party.putNull("accountId");
         }
       }
-      String name = ordered.getParties() == null ? null : ordered.getParties().stream()
-          .filter(p -> p.getMeta() != null && key.equals(p.getMeta().getExternalKey()))
-          .map(p -> p.getName() == null ? null : p.getName().getValue())
-          .filter(Objects::nonNull)
-          .findFirst().orElse(null);
-      party.put("name", name);
+    }
+    String venue = CdmLifecycle.roleKey(ordered.getPartyRoles(), PartyRoleEnum.EXECUTION_FACILITY);
+    if (venue != null) {
+      ObjectNode party = node.putObject("venue");
+      party.put("cdmRef", new CdmRef(CdmRef.Kind.PARTY, venue).toString());
+      party.put("role", "ExecutionFacility");
+      putName(party, ordered, venue);
     }
     return node;
+  }
+
+  private static void putName(ObjectNode party, ExecutionInstruction ordered, String key) {
+    party.put("name", ordered.getParties() == null ? null : ordered.getParties().stream()
+        .filter(p -> p.getMeta() != null && key.equals(p.getMeta().getExternalKey()))
+        .map(p -> p.getName() == null ? null : p.getName().getValue())
+        .filter(Objects::nonNull)
+        .findFirst().orElse(null));
   }
 
   private JsonNode security(ExecutionInstruction ordered) {

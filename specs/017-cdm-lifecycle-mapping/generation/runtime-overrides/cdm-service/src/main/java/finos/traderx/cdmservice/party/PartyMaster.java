@@ -37,8 +37,11 @@ import org.springframework.stereotype.Service;
  * The authoritative party master: one CDM {@link Party} per TraderX account
  * ({@code cdm:party:<accountId>}, with its users as related persons in the role Trader), one
  * {@link NaturalPerson} per person ({@code cdm:person:<logonId>}, the single person authority:
- * account parties embed identifier-only persons) and the venue party
- * ({@code cdm:party:traderx-matching-engine}).
+ * account parties embed identifier-only persons), one Party per TraderX group subsidiary that
+ * faces clients ({@code cdm:party:traderx-nyc}, ... from {@code seed/entities.json}) and the
+ * venue party ({@code cdm:party:traderx-matching-engine}). Each account party's CDM
+ * {@code account.servicingParty} names the subsidiary that faces it; {@link #setServicingEntity}
+ * changes it.
  *
  * <p><b>Seeding.</b> On {@link ApplicationReadyEvent} it reads 009's {@code accounts} and
  * {@code accountusers} tables and {@code seed/people.json}, and stores a CDM object for each
@@ -82,22 +85,32 @@ public class PartyMaster implements CdmMaster {
   /** {@code null} until the first complete seed; replaced whole on every write. */
   private volatile Index index;
 
-  /** Immutable view: accounts by id, persons by logon id, the venue. */
+  /** Immutable view: accounts by id, persons by logon id, subsidiaries by key, the venue. */
   private record Index(SortedMap<Integer, Party> accounts, Map<String, NaturalPerson> persons,
-      Party venue) {
+      Map<String, Party> entities, Party venue) {
 
     Index withAccount(int id, Party party) {
       TreeMap<Integer, Party> next = new TreeMap<>(accounts);
       next.put(id, party);
-      return new Index(Collections.unmodifiableSortedMap(next), persons, venue);
+      return new Index(Collections.unmodifiableSortedMap(next), persons, entities, venue);
     }
 
     Index withPerson(String logonId, NaturalPerson person) {
       Map<String, NaturalPerson> next = new LinkedHashMap<>(persons);
       next.put(logonId, person);
-      return new Index(accounts, Collections.unmodifiableMap(next), venue);
+      return new Index(accounts, Collections.unmodifiableMap(next), entities, venue);
     }
   }
+
+  /** No TraderX subsidiary with this key (HTTP 400). */
+  public static class UnknownEntityException extends IllegalArgumentException {
+
+    public UnknownEntityException(String key) {
+      super("Unknown TraderX entity: " + key);
+    }
+  }
+
+  private final EntitySeed.Seed entitySeed = EntitySeed.load();
 
   /** The master has not completed its seed yet (HTTP 503). */
   public static class NotReadyException extends RuntimeException {
@@ -208,6 +221,23 @@ public class PartyMaster implements CdmMaster {
       }
     }
 
+    Map<String, Party> entities = new LinkedHashMap<>();
+    for (EntitySeed.Entity seed : entitySeed.entities()) {
+      try {
+        CdmRef ref = PartyMapper.entityRef(seed.key());
+        Optional<Party> stored = loadStored(ref, Party.class);
+        Party entity = stored.orElseGet(() -> PartyMapper.entityParty(seed));
+        if (stored.isEmpty()) {
+          write(ref, entity);
+          created++;
+        }
+        entities.put(seed.key(), entity);
+      } catch (RuntimeException e) {
+        failed++;
+        log.error("Cannot seed CDM entity party {}", seed.key(), e);
+      }
+    }
+
     Party venue = null;
     try {
       Optional<Party> stored = loadStored(PartyMapper.venueRef(), Party.class);
@@ -229,10 +259,14 @@ public class PartyMaster implements CdmMaster {
         Party party = stored.orElseGet(() -> PartyMapper.toCdmParty(id, row.getValue(),
             tableUsers.getOrDefault(id, List.of()).stream()
                 .map(PartyMapper::identifiedPerson)
-                .toList()));
+                .toList(), entitySeed.entityFor(id)));
         if (stored.isEmpty()) {
           write(PartyMapper.partyRef(id), party);
           created++;
+        } else if (PartyMapper.servicingEntity(party).isEmpty()) {
+          // Stored by a build without facing subsidiaries: give it its seed assignment.
+          party = PartyMapper.withServicingEntity(party, entitySeed.entityFor(id));
+          write(PartyMapper.partyRef(id), party);
         }
         accounts.put(id, party);
       } catch (RuntimeException e) {
@@ -242,7 +276,7 @@ public class PartyMaster implements CdmMaster {
     }
     try {
       for (CdmRef ref : store.refs(Party.class)) {
-        if (ref.key().equals(PartyMapper.VENUE_KEY)) {
+        if (ref.key().equals(PartyMapper.VENUE_KEY) || entitySeed.isEntity(ref.key())) {
           continue;
         }
         Integer id = parseAccountId(ref.key());
@@ -260,7 +294,7 @@ public class PartyMaster implements CdmMaster {
       return false;
     }
     index = new Index(Collections.unmodifiableSortedMap(accounts),
-        Collections.unmodifiableMap(persons), venue);
+        Collections.unmodifiableMap(persons), Collections.unmodifiableMap(entities), venue);
     log.info("CDM party master ready: {} accounts, {} persons ({} objects newly seeded)",
         accounts.size(), persons.size(), created);
     return true;
@@ -359,6 +393,70 @@ public class PartyMaster implements CdmMaster {
     return readStored(PartyMapper.personRef(logonId), NaturalPerson.class);
   }
 
+  /** The TraderX subsidiaries that can face a client, in seed order. */
+  public List<Party> entities() {
+    Index current = index;
+    if (current != null) {
+      return List.copyOf(current.entities().values());
+    }
+    return entitySeed.entities().stream().map(PartyMapper::entityParty).toList();
+  }
+
+  /** The subsidiary party with this key (stored by the seed; the mapped constant before that). */
+  public Optional<Party> entity(String key) {
+    if (key == null || !entitySeed.isEntity(key)) {
+      return Optional.empty();
+    }
+    Index current = index;
+    if (current != null && current.entities().containsKey(key)) {
+      return Optional.of(current.entities().get(key));
+    }
+    return entitySeed.entities().stream().filter(e -> e.key().equals(key)).findFirst()
+        .map(PartyMapper::entityParty);
+  }
+
+  /** True if {@code key} is a TraderX subsidiary's key. */
+  public boolean isEntity(String key) {
+    return key != null && entitySeed.isEntity(key);
+  }
+
+  /**
+   * The subsidiary facing {@code accountId}: its party's {@code account.servicingParty}, or the
+   * seed assignment for an account party that has none.
+   */
+  public Party facingEntity(int accountId) {
+    String key = findParty(accountId).flatMap(PartyMapper::servicingEntity)
+        .filter(entitySeed::isEntity)
+        .orElse(entitySeed.entityFor(accountId));
+    return entity(key).orElseThrow();
+  }
+
+  /**
+   * Makes {@code entityKey} the subsidiary servicing account {@code accountId}: a new version of
+   * the account party with {@code account.servicingParty} set. Orders and trades already mapped
+   * keep the subsidiary they were mapped with; later ones face the new one.
+   *
+   * @throws UnknownAccountException if there is no such account
+   * @throws UnknownEntityException if {@code entityKey} is not a TraderX subsidiary
+   */
+  public synchronized AccountProjection setServicingEntity(int accountId, String entityKey) {
+    Index current = ready();
+    if (!isEntity(entityKey)) {
+      throw new UnknownEntityException(entityKey);
+    }
+    Party existing = current.accounts().get(accountId);
+    if (existing == null) {
+      throw new UnknownAccountException(accountId);
+    }
+    if (!entityKey.equals(PartyMapper.servicingEntity(existing).orElse(null))) {
+      Party party = PartyMapper.withServicingEntity(existing, entityKey);
+      write(PartyMapper.partyRef(accountId), party);
+      index = current.withAccount(accountId, party);
+      return PartyMapper.toAccountProjection(party);
+    }
+    return PartyMapper.toAccountProjection(existing);
+  }
+
   /** The venue party (stored by the seed; the mapped constant before that). */
   public Party venue() {
     Index current = index;
@@ -410,7 +508,8 @@ public class PartyMaster implements CdmMaster {
         log.warn("accounts_seq value {} already has an accounts row; drawing again", id);
         continue;
       }
-      Party party = PartyMapper.toCdmParty(id, displayName);
+      Party party = PartyMapper.toCdmParty(id, displayName, List.of(),
+          entitySeed.entityFor(id));
       try {
         write(PartyMapper.partyRef(id), party);
       } catch (RuntimeException e) {
@@ -435,7 +534,10 @@ public class PartyMaster implements CdmMaster {
     Party existing = current.accounts().get(id);
     List<NaturalPerson> persons = existing == null || existing.getPerson() == null
         ? List.of() : List.copyOf(existing.getPerson());
-    Party party = PartyMapper.toCdmParty(id, displayName, persons);
+    String servicing = existing == null ? null
+        : PartyMapper.servicingEntity(existing).orElse(null);
+    Party party = PartyMapper.toCdmParty(id, displayName, persons,
+        servicing != null ? servicing : entitySeed.entityFor(id));
     boolean inserted = accountsTable.upsert(id, displayName);
     try {
       write(PartyMapper.partyRef(id), party);
@@ -481,7 +583,8 @@ public class PartyMaster implements CdmMaster {
           existing.getPerson() == null ? List.of() : existing.getPerson());
       persons.add(PartyMapper.identifiedPerson(logonId));
       String name = existing.getName() == null ? null : existing.getName().getValue();
-      Party party = PartyMapper.toCdmParty(accountId, name, persons);
+      Party party = PartyMapper.toCdmParty(accountId, name, persons,
+          PartyMapper.servicingEntity(existing).orElse(entitySeed.entityFor(accountId)));
       boolean inserted = accountsTable.addUserIfAbsent(accountId, logonId);
       try {
         write(PartyMapper.partyRef(accountId), party);

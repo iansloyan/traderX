@@ -537,7 +537,7 @@ class LifecycleAdapterTest {
   // --- direct trades, rejections, failures ---------------------------------------------------
 
   @Test
-  void directTradeUsesDirectRefAndElectronic() {
+  void directTradeUsesDirectRefAndOffFacility() {
     adapter.onBookedTrade(directTrade());
 
     List<StoredCdm> chain = steps(DIRECT_REF);
@@ -548,7 +548,7 @@ class LifecycleAdapterTest {
     assertThat(accepted.getWorkflowState().getWorkflowStatus())
         .isEqualTo(WorkflowStatusEnum.ACCEPTED);
     assertThat(ExecutionMapper.afterState(accepted.getBusinessEvent()).getTrade()
-        .getExecutionDetails().getExecutionType()).isEqualTo(ExecutionTypeEnum.ELECTRONIC);
+        .getExecutionDetails().getExecutionType()).isEqualTo(ExecutionTypeEnum.OFF_FACILITY);
     assertTradeStateOnly(DIRECT_TRADE_REF, new ProducedBy(DIRECT_REF, chain.get(1).globalKey()));
     assertThat(published).extracting(Published::subject).containsExactly(
         "cdm.workflow", "cdm.workflow", "cdm.events", "cdm.tradestate");

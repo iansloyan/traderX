@@ -10,6 +10,7 @@ import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.canceledOrder
 import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.directTrade;
 import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.fill1;
 import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.fill2;
+import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.ACCOUNT;
 import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.golden;
 import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.newOrder;
 import static finos.traderx.cdmservice.lifecycle.LifecycleFixtures.readGolden;
@@ -282,7 +283,7 @@ class ExecutionMapperTest {
   }
 
   @Test
-  void fillIsOnVenueDirectIsElectronic() {
+  void fillIsOnVenueDirectIsOffFacilityWithoutVenue() {
     ExecutionMapper.FillWorkflow fill = EXECUTION.fill(approved, fill1());
     ExecutionMapper.FillWorkflow direct = EXECUTION.direct(directTrade());
 
@@ -291,9 +292,22 @@ class ExecutionMapperTest {
     assertThat(fill.after().getTrade().getExecutionDetails().getExecutionType())
         .isEqualTo(ExecutionTypeEnum.ON_VENUE);
     assertThat(WorkflowMapper.executionInstruction(direct.proposed()).getExecutionDetails()
-        .getExecutionType()).isEqualTo(ExecutionTypeEnum.ELECTRONIC);
+        .getExecutionType()).isEqualTo(ExecutionTypeEnum.OFF_FACILITY);
     assertThat(direct.after().getTrade().getExecutionDetails().getExecutionType())
-        .isEqualTo(ExecutionTypeEnum.ELECTRONIC);
+        .isEqualTo(ExecutionTypeEnum.OFF_FACILITY);
+    // A direct trade is a bilateral booking: no execution venue and no ExecutionFacility party.
+    assertThat(direct.after().getTrade().getExecutionDetails().getExecutionVenue()).isNull();
+    assertThat(direct.after().getTrade().getPartyRole())
+        .noneMatch(r -> r.getRole() == PartyRoleEnum.EXECUTION_FACILITY);
+    assertThat(direct.after().getTrade().getParty()).extracting(p -> p.getMeta().getExternalKey())
+        .containsExactly("traderx-nyc", Integer.toString(ACCOUNT));
+    // A fill keeps the venue as execution facility, never as a counterparty.
+    assertThat(fill.after().getTrade().getCounterparty())
+        .extracting(c -> c.getPartyReference().getExternalReference())
+        .containsExactlyInAnyOrder("traderx-nyc", Integer.toString(ACCOUNT));
+    assertThat(fill.after().getTrade().getPartyRole())
+        .anyMatch(r -> r.getRole() == PartyRoleEnum.EXECUTION_FACILITY
+            && PartyMapper.VENUE_KEY.equals(r.getPartyReference().getExternalReference()));
   }
 
   @Test

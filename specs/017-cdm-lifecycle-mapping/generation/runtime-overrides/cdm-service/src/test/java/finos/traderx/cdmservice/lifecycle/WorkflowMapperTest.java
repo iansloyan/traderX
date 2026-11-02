@@ -35,31 +35,41 @@ import org.junit.jupiter.api.Test;
 class WorkflowMapperTest {
 
   @Test
-  void proposedStepCarriesInstructionWithBuyerAccountSellerVenue() {
+  void proposedStepIsDealerAgainstClientWithVenueAsFacility() {
     WorkflowStep proposed = WORKFLOW.proposed(newOrder());
 
     assertThat(proposed.getAction()).isEqualTo(ActionEnum.NEW);
     assertThat(proposed.getBusinessEvent()).isNull();
     ExecutionInstruction instruction = WorkflowMapper.executionInstruction(proposed);
 
-    // Account = Party1, venue = Party2.
+    // Dealer (the facing TraderX subsidiary) = Party1, client (the account) = Party2; the venue
+    // is not a counterparty.
     Map<CounterpartyRoleEnum, String> counterparties = instruction.getCounterparty().stream()
         .collect(Collectors.toMap(c -> c.getRole(),
             c -> c.getPartyReference().getExternalReference()));
     assertThat(counterparties).containsExactlyInAnyOrderEntriesOf(Map.of(
-        CounterpartyRoleEnum.PARTY_1, Integer.toString(ACCOUNT),
-        CounterpartyRoleEnum.PARTY_2, PartyMapper.VENUE_KEY));
-    // A buy: the account is Buyer, the venue Seller.
+        CounterpartyRoleEnum.PARTY_1, "traderx-nyc",
+        CounterpartyRoleEnum.PARTY_2, Integer.toString(ACCOUNT)));
+    // A buy: the client is Buyer, the dealer Seller; the venue only the execution facility.
     Map<PartyRoleEnum, String> roles = instruction.getPartyRoles().stream()
         .collect(Collectors.toMap(r -> r.getRole(),
             r -> r.getPartyReference().getExternalReference()));
-    assertThat(roles).containsEntry(PartyRoleEnum.BUYER, Integer.toString(ACCOUNT))
-        .containsEntry(PartyRoleEnum.SELLER, PartyMapper.VENUE_KEY);
-    // The seller (venue, Party2) delivers the shares to the buyer (Party1).
+    assertThat(roles).containsExactlyInAnyOrderEntriesOf(Map.of(
+        PartyRoleEnum.BUYER, Integer.toString(ACCOUNT),
+        PartyRoleEnum.SELLER, "traderx-nyc",
+        PartyRoleEnum.CLIENT, Integer.toString(ACCOUNT),
+        PartyRoleEnum.EXECUTING_ENTITY, "traderx-nyc",
+        PartyRoleEnum.BOOKING_PARTY, "traderx-nyc",
+        PartyRoleEnum.EXECUTION_FACILITY, PartyMapper.VENUE_KEY));
+    assertThat(instruction.getParties()).extracting(p -> p.getMeta().getExternalKey())
+        .containsExactly("traderx-nyc", Integer.toString(ACCOUNT), PartyMapper.VENUE_KEY);
+    assertThat(instruction.getExecutionDetails().getExecutionVenue().getName().getValue())
+        .isEqualTo(PartyMapper.VENUE_NAME);
+    // The seller (the dealer, Party1) delivers the shares to the buyer (the client, Party2).
     SettlementPayout payout = instruction.getProduct().getEconomicTerms().getPayout().get(0)
         .getSettlementPayout();
-    assertThat(payout.getPayerReceiver().getPayer()).isEqualTo(CounterpartyRoleEnum.PARTY_2);
-    assertThat(payout.getPayerReceiver().getReceiver()).isEqualTo(CounterpartyRoleEnum.PARTY_1);
+    assertThat(payout.getPayerReceiver().getPayer()).isEqualTo(CounterpartyRoleEnum.PARTY_1);
+    assertThat(payout.getPayerReceiver().getReceiver()).isEqualTo(CounterpartyRoleEnum.PARTY_2);
     assertThat(payout.getUnderlier().getObservable().getValue().getAsset().getInstrument()
         .getSecurity()).isEqualTo(LifecycleFixtures.IBM);
 
@@ -71,7 +81,7 @@ class WorkflowMapperTest {
     assertThat(price.getPerUnitOf().getFinancialUnit()).isEqualTo(FinancialUnitEnum.SHARE);
     assertThat(instruction.getPriceQuantity().get(0).getQuantity().getValue().getValue())
         .isEqualTo(bd("1500"));
-    // The order is an instruction to execute on the venue (the matching engine, Party2).
+    // The order is an instruction to execute on the venue (the matching engine).
     assertThat(instruction.getExecutionDetails().getExecutionType())
         .isEqualTo(ExecutionTypeEnum.ON_VENUE);
     assertThat(WorkflowMapper.orderId(proposed)).isEqualTo(ORDER_ID);
@@ -90,10 +100,10 @@ class WorkflowMapperTest {
         .collect(Collectors.toMap(r -> r.getRole(),
             r -> r.getPartyReference().getExternalReference()));
     assertThat(roles).containsEntry(PartyRoleEnum.SELLER, Integer.toString(ACCOUNT))
-        .containsEntry(PartyRoleEnum.BUYER, PartyMapper.VENUE_KEY);
+        .containsEntry(PartyRoleEnum.BUYER, "traderx-nyc");
     SettlementPayout payout = instruction.getProduct().getEconomicTerms().getPayout().get(0)
         .getSettlementPayout();
-    assertThat(payout.getPayerReceiver().getPayer()).isEqualTo(CounterpartyRoleEnum.PARTY_1);
+    assertThat(payout.getPayerReceiver().getPayer()).isEqualTo(CounterpartyRoleEnum.PARTY_2);
     // Price scale is normalised to 3 decimals.
     assertThat(instruction.getPriceQuantity().get(0).getPrice().get(0).getValue().getValue())
         .isEqualTo(bd("181.000"));

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import finos.traderx.cdmservice.config.CdmRuntimeConfig;
 import finos.traderx.cdmservice.metrics.CdmMetrics;
+import finos.traderx.cdmservice.party.EntitySeed;
 import finos.traderx.cdmservice.party.PartyMapper;
 import finos.traderx.cdmservice.security.SecurityMapper;
 import finos.traderx.cdmservice.store.CdmStore;
@@ -43,8 +44,11 @@ public final class LifecycleFixtures {
   public static final Instant CANCEL_AT = Instant.parse("2026-10-29T14:31:00Z");
 
   public static final Security IBM = SecurityMapper.toCdm("IBM", "International Business Machines");
+  public static final Party NYC = PartyMapper.entityParty(
+      new EntitySeed.Entity("traderx-nyc", "TraderX NYC"));
   public static final Party ACCOUNT_PARTY = PartyMapper.toCdmParty(ACCOUNT, "Test Account 20",
-      List.of(PartyMapper.identifiedPerson("user01"), PartyMapper.identifiedPerson("user03")));
+      List.of(PartyMapper.identifiedPerson("user01"), PartyMapper.identifiedPerson("user03")),
+      "traderx-nyc");
 
   public static final LifecycleReferenceData REFERENCE_DATA = new LifecycleReferenceData() {
     @Override
@@ -55,6 +59,11 @@ public final class LifecycleFixtures {
     @Override
     public Optional<Party> account(int accountId) {
       return accountId == ACCOUNT ? Optional.of(ACCOUNT_PARTY) : Optional.empty();
+    }
+
+    @Override
+    public Party dealer(int accountId) {
+      return NYC;
     }
 
     @Override

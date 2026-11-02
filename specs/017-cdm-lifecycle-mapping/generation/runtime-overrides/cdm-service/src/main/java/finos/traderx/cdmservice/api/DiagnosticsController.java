@@ -153,12 +153,8 @@ public class DiagnosticsController {
     if (instruction == null || instruction.getCounterparty() == null) {
       return null;
     }
-    return instruction.getCounterparty().stream()
-        .filter(c -> c.getRole() == CounterpartyRoleEnum.PARTY_1)
-        .map(Counterparty::getPartyReference)
-        .filter(r -> r != null)
-        .map(r -> r.getExternalReference())
-        .findFirst().orElse(null);
+    return finos.traderx.cdmservice.lifecycle.CdmLifecycle.counterpartyKey(
+        instruction.getCounterparty(), finos.traderx.cdmservice.lifecycle.CdmLifecycle.CLIENT);
   }
 
   private static Integer parseInt(String text) {

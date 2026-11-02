@@ -235,9 +235,10 @@ class DiagnosticsControllerTest {
     assertThat(state.at("/security/ticker").asText()).isEqualTo("IBM");
     assertThat(state.at("/account/cdmRef").asText()).isEqualTo("cdm:party:22214");
     assertThat(state.at("/validation/status").asText()).isEqualTo("VALID");
-    assertThat(lineage.at("/executionType").asText()).isEqualTo("Electronic");
+    assertThat(lineage.at("/executionType").asText()).isEqualTo("OffFacility");
     assertThat(lineage.at("/executionTypeMeaning").asText())
-        .isEqualTo("Booked electronically from the trade ticket, not matched");
+        .isEqualTo("Booked bilaterally between the TraderX subsidiary and the client from the trade"
+            + " ticket, with no venue");
 
     // Then what produced it: the direct workflow under cdm:direct, proposed then accepted.
     JsonNode producedBy = lineage.at("/producedBy");

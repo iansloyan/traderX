@@ -210,7 +210,8 @@ public final class WorkflowMapper {
     Security security = CdmLifecycle.requireSecurity(referenceData, order.security());
     Party account = CdmLifecycle.requireAccount(referenceData, order.accountId());
     return CdmLifecycle.executionInstruction(
-        products.cashEquity(security, side), side, account, referenceData.venue(),
+        products.cashEquity(security, side), side, account,
+        referenceData.dealer(order.accountId()), referenceData.venue(),
         CdmProducts.priceQuantity(order.limitPrice(), quantity, false),
         order.updatedAt(),
         List.of(CdmLifecycle.tradeIdentifier(order.orderId(), ORDER_ID_SCHEME)),
@@ -228,7 +229,8 @@ public final class WorkflowMapper {
     Side side = Side.parse(rejected.side());
     ExecutionInstruction instruction = CdmLifecycle.executionInstruction(
         products.cashEquity(requestedSecurity(rejected.security()), side), side,
-        requestedAccount(rejected.accountId()), referenceData.venue(),
+        requestedAccount(rejected.accountId()), referenceData.dealer(rejected.accountId()),
+        referenceData.venue(),
         CdmProducts.priceQuantity(rejected.limitPrice(), rejected.quantity(), false),
         rejected.rejectedAt(),
         List.of(CdmLifecycle.tradeIdentifier(rejected.rejectionId(), REJECTION_ID_SCHEME)),

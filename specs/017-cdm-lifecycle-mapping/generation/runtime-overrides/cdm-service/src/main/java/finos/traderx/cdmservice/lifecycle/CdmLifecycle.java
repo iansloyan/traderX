@@ -38,7 +38,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /** Building blocks shared by {@link WorkflowMapper} and {@link ExecutionMapper}. */
-final class CdmLifecycle {
+public final class CdmLifecycle {
 
   /** Issuer of every TraderX identifier on CDM lifecycle objects. */
   static final String ISSUER = "TraderX";
@@ -117,7 +117,33 @@ final class CdmLifecycle {
         .build();
   }
 
-  /** A reference to {@code party} by its external key (account id or venue key). */
+  /** The dealer (the facing TraderX subsidiary) is {@code Party1} of every order and trade. */
+  public static final CounterpartyRoleEnum DEALER = CounterpartyRoleEnum.PARTY_1;
+  /** The client (the TraderX account) is {@code Party2} of every order and trade. */
+  public static final CounterpartyRoleEnum CLIENT = CounterpartyRoleEnum.PARTY_2;
+
+  /** The external key of the counterparty with {@code role}, or null. */
+  public static String counterpartyKey(List<? extends Counterparty> counterparties,
+      CounterpartyRoleEnum role) {
+    return counterparties == null ? null : counterparties.stream()
+        .filter(c -> c.getRole() == role)
+        .map(Counterparty::getPartyReference)
+        .filter(java.util.Objects::nonNull)
+        .map(ReferenceWithMetaParty::getExternalReference)
+        .findFirst().orElse(null);
+  }
+
+  /** The external key of the first party with {@code role} in {@code roles}, or null. */
+  public static String roleKey(List<? extends PartyRole> roles, PartyRoleEnum role) {
+    return roles == null ? null : roles.stream()
+        .filter(r -> r.getRole() == role)
+        .map(PartyRole::getPartyReference)
+        .filter(java.util.Objects::nonNull)
+        .map(ReferenceWithMetaParty::getExternalReference)
+        .findFirst().orElse(null);
+  }
+
+  /** A reference to {@code party} by its external key (account id, subsidiary or venue key). */
   static ReferenceWithMetaParty partyReference(Party party) {
     return ReferenceWithMetaParty.builder().setExternalReference(externalKey(party)).build();
   }
@@ -153,34 +179,41 @@ final class CdmLifecycle {
   }
 
   /**
-   * The execution instruction of an order or a fill: the cash-equity product, one
-   * price/quantity, the account ({@code Party1}) against the venue ({@code Party2}), buyer and
-   * seller from the account's side, the venue as execution facility, the execution type, the
-   * trade date and time and the TraderX identifiers.
+   * The execution instruction of an order, a fill or a direct trade: the cash-equity product,
+   * one price/quantity, the dealer (the facing TraderX subsidiary, {@code Party1}) against the
+   * client (the account, {@code Party2}) as principals, buyer and seller from the client's
+   * side, the client in role {@code Client} and the dealer in roles {@code ExecutingEntity} and
+   * {@code BookingParty}; when a venue is given, the venue as a third party in role
+   * {@code ExecutionFacility} and as {@code executionVenue} (never a counterparty); the
+   * execution type, the trade date and time and the TraderX identifiers.
    *
-   * @param executionType {@code OnVenue} for an order and its fills (executed by the TraderX
-   *                      matching engine, the venue, Party2); {@code Electronic} for a direct
-   *                      trade (booked electronically from the trade ticket, not matched)
+   * @param venue         the matcher for an order and its fills; null for a direct trade
+   * @param executionType {@code OnVenue} for an order and its fills (sent to and executed by
+   *                      the TraderX matching engine); {@code OffFacility} for a direct trade
+   *                      (booked bilaterally from the trade ticket, no venue)
    */
   static ExecutionInstruction executionInstruction(NonTransferableProduct product, Side side,
-      Party account, Party venue, PriceQuantity priceQuantity, Instant at,
+      Party client, Party dealer, Party venue, PriceQuantity priceQuantity, Instant at,
       List<TradeIdentifier> tradeIdentifiers, ExecutionTypeEnum executionType) {
-    Party accountParty = tradeParty(account);
-    Party venueParty = tradeParty(venue);
+    Party clientParty = tradeParty(client);
+    Party dealerParty = tradeParty(dealer);
+    ExecutionDetails.ExecutionDetailsBuilder details = ExecutionDetails.builder()
+        .setExecutionType(executionType);
+    if (venue != null) {
+      details.setExecutionVenue(venueEntity());
+    }
     ExecutionInstruction.ExecutionInstructionBuilder instruction = ExecutionInstruction.builder()
         .setProduct(product)
         .addPriceQuantity(priceQuantity)
         .addCounterparty(Counterparty.builder()
-            .setRole(CounterpartyRoleEnum.PARTY_1)
-            .setPartyReference(partyReference(accountParty)))
+            .setRole(DEALER)
+            .setPartyReference(partyReference(dealerParty)))
         .addCounterparty(Counterparty.builder()
-            .setRole(CounterpartyRoleEnum.PARTY_2)
-            .setPartyReference(partyReference(venueParty)))
-        .addParties(accountParty)
-        .addParties(venueParty)
-        .setExecutionDetails(ExecutionDetails.builder()
-            .setExecutionType(executionType)
-            .setExecutionVenue(venueEntity()))
+            .setRole(CLIENT)
+            .setPartyReference(partyReference(clientParty)))
+        .addParties(dealerParty)
+        .addParties(clientParty)
+        .setExecutionDetails(details)
         .setTradeDate(FieldWithMetaDate.builder()
             .setValue(date(at))
             .setMeta(MetaFields.builder().setExternalKey(CdmProducts.TRADE_DATE_KEY)))
@@ -188,10 +221,18 @@ final class CdmLifecycle {
         .addTradeIdentifier(tradeIdentifiers);
     if (side != null) {
       instruction
-          .addPartyRoles(role(side == Side.BUY ? accountParty : venueParty, PartyRoleEnum.BUYER))
-          .addPartyRoles(role(side == Side.BUY ? venueParty : accountParty, PartyRoleEnum.SELLER));
+          .addPartyRoles(role(side == Side.BUY ? clientParty : dealerParty, PartyRoleEnum.BUYER))
+          .addPartyRoles(role(side == Side.BUY ? dealerParty : clientParty, PartyRoleEnum.SELLER));
     }
-    instruction.addPartyRoles(role(venueParty, PartyRoleEnum.EXECUTION_FACILITY));
+    instruction
+        .addPartyRoles(role(clientParty, PartyRoleEnum.CLIENT))
+        .addPartyRoles(role(dealerParty, PartyRoleEnum.EXECUTING_ENTITY))
+        .addPartyRoles(role(dealerParty, PartyRoleEnum.BOOKING_PARTY));
+    if (venue != null) {
+      Party venueParty = tradeParty(venue);
+      instruction.addParties(venueParty)
+          .addPartyRoles(role(venueParty, PartyRoleEnum.EXECUTION_FACILITY));
+    }
     return instruction.build();
   }
 

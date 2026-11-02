@@ -1,0 +1,18 @@
+{
+  "comment": "TraderX group subsidiaries that face clients, and which subsidiary services each seeded 009 account (CDM Account.servicingParty). Accounts not listed, and accounts created later, face defaultEntity.",
+  "defaultEntity": "traderx-nyc",
+  "entities": [
+    { "key": "traderx-nyc", "name": "TraderX NYC" },
+    { "key": "traderx-ldn", "name": "TraderX LDN" },
+    { "key": "traderx-tky", "name": "TraderX TKY" }
+  ],
+  "accounts": {
+    "22214": "traderx-nyc",
+    "52355": "traderx-nyc",
+    "44044": "traderx-nyc",
+    "11413": "traderx-ldn",
+    "62654": "traderx-ldn",
+    "42422": "traderx-tky",
+    "10031": "traderx-tky"
+  }
+}
