@@ -62,7 +62,7 @@ public final class LifecycleFixtures {
     }
 
     @Override
-    public Party dealer(int accountId) {
+    public Party dealer(Integer accountId) {
       return NYC;
     }
 

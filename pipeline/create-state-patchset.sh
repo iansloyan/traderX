@@ -44,7 +44,29 @@ PATCH_DIR="${ROOT}/specs/${STATE_ID}/generation/patches"
 PATCH_FILE="${PATCH_DIR}/0001-state-overlay.patch"
 
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "${TMP_DIR}"' EXIT
+# In TRADERX_PATCHSET_CHILD_FROM_TARGET=1 mode the target tree, edited in place, is overwritten by
+# the parent state, so it is backed up first (TARGET_BACKUP: everything but dependencies and build
+# output, which stay in place). If the capture does not complete, the backup is put back and kept.
+CAPTURE_COMPLETE=0
+TARGET_BACKUP="${TMP_DIR}/target-backup"
+BACKUP_EXCLUDES=(--exclude=.git --exclude=node_modules --exclude=.gradle --exclude=build
+  --exclude=target --exclude=dist --exclude=coverage --exclude=.angular)
+cleanup() {
+  local status=$?
+  if [[ "${TRADERX_PATCHSET_CHILD_FROM_TARGET:-0}" == "1" && "${CAPTURE_COMPLETE}" != "1" \
+        && -d "${TARGET_BACKUP}" ]]; then
+    echo "[warn] capture did not complete; restoring your edited tree to ${TARGET_PATH}"
+    if rsync -a --delete "${BACKUP_EXCLUDES[@]}" "${TARGET_BACKUP}/" "${TARGET_PATH}/"; then
+      echo "[hint] target tree restored as it was before the capture"
+    else
+      echo "[error] could not restore the target tree"
+    fi
+    echo "[hint] backup of the edited tree kept at: ${TARGET_BACKUP}"
+    exit "${status}"
+  fi
+  rm -rf "${TMP_DIR}"
+}
+trap cleanup EXIT
 
 PARENT_SNAPSHOT="${TMP_DIR}/parent"
 CHILD_SNAPSHOT="${TMP_DIR}/child"
@@ -114,6 +136,8 @@ if [[ "${CHILD_FROM_TARGET}" == "1" ]]; then
     exit 1
   fi
   echo "[info] capturing current target tree as child state ${STATE_ID}: ${TARGET_PATH}"
+  mkdir -p "${TARGET_BACKUP}"
+  rsync -a --delete "${BACKUP_EXCLUDES[@]}" "${TARGET_PATH}/" "${TARGET_BACKUP}/"
   mkdir -p "${CHILD_SNAPSHOT}"
   rsync -a --delete "${RSYNC_EXCLUDES[@]}" "${TARGET_PATH}/" "${CHILD_SNAPSHOT}/"
 fi
@@ -183,12 +207,11 @@ if [[ "${CHILD_FROM_TARGET}" == "1" ]]; then
     else
       rm -f "${PATCH_FILE}"
     fi
-    trap - EXIT
     echo "[fail] regeneration of ${STATE_ID} from the captured patch failed"
     echo "[hint] previous patch restored: ${PATCH_FILE}"
     echo "[hint] captured patch kept for inspection: ${PATCH_FILE}.rejected"
-    echo "[hint] captured child snapshot (your edits) preserved at: ${CHILD_SNAPSHOT}"
     exit 1
   fi
   echo "[done] target tree holds regenerated ${STATE_ID} output"
 fi
+CAPTURE_COMPLETE=1

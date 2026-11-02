@@ -155,7 +155,7 @@ Start here:
   JSON, translation rules, semantic gaps, projection losses and the phased adoption path.
 - [`contracts/contract-delta.md`](contracts/contract-delta.md): REST, NATS, schema and UI changes.
 - [`tests/smoke/README.md`](tests/smoke/README.md): what the scenario tests prove.
-- [`research.md`, "Decision log"](research.md#decision-log-r1r74): every "Ruling Rnn" cited in the
+- [`research.md`, "Decision log"](research.md#decision-log-r1r76): every "Ruling Rnn" cited in the
   code and documents, with its reason and consequence.
 
 Core artifacts:

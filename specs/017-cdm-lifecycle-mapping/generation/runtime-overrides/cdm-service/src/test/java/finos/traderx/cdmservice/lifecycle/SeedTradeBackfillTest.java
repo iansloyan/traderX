@@ -77,7 +77,7 @@ class SeedTradeBackfillTest {
     }
 
     @Override
-    public Party dealer(int accountId) {
+    public Party dealer(Integer accountId) {
       return LifecycleFixtures.NYC;
     }
 

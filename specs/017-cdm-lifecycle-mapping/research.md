@@ -653,7 +653,7 @@ and records its failures like live events.
     ownership table in `generation/generation-hook.md` states which generated paths come from the patch
     and which from `runtime-overrides/`.
 
-## Decision log (R1–R74)
+## Decision log (R1–R76)
 
 Code comments, tests and documents in this state cite "Ruling Rnn". Each ruling is listed here: the
 decision, why it was taken, and its consequence. A few rulings were about the build process rather than
@@ -877,3 +877,15 @@ decision — why — the cost if it turns out wrong.
   account model is authoritative in 017, so the trading relationship belongs on the account screen,
   not only on order and trade pages — *cost if wrong:* two optional fields and one grid column to
   remove; no 009 field changes.
+- **R75. A fill takes its dealer from its order, not from the account's current subsidiary.** The
+  fill's `Party1` is the order instruction's `Party1`; only direct trades (and orders) read the
+  account's current `servicingParty`. Found in review — *why:* switching an account's subsidiary while
+  an order is open would otherwise give the order's later fills a different dealer from the order,
+  and a fill write interrupted before the switch could never be resumed (its remapped steps would no
+  longer match) — *cost if wrong:* none known; an order mapped before Ruling R69 falls back to the
+  current subsidiary.
+- **R76. A rejected request with no account id faces the default subsidiary.** Found in review —
+  *why:* the dealer lookup took an `int` and a null account id threw, so such rejections were
+  recorded only as lifecycle failures — *cost if wrong:* the rejection's dealer is the seed default
+  (NYC) rather than unknown; the client party is already an "unknown" placeholder.
+

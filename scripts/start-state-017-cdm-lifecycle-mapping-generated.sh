@@ -203,6 +203,26 @@ check_existing_data_volume() {
     return 1
   fi
   echo "[ok] data volume schema is current"
+  # The dealer/client party model (Ruling R69) did not change the schema, so data written before
+  # it passes the check above. Such data has the venue as counterparty Party2 on trade states and
+  # order steps; every reading of them would then mix up dealer, client and venue.
+  local old_parties
+  old_parties="$(compose exec -T database psql -v ON_ERROR_STOP=1 -U traderx -d traderx -tAc "
+    SELECT EXISTS (SELECT 1 FROM cdm_documents
+      WHERE cdm_type IN ('cdm.event.common.TradeState', 'cdm.event.workflow.WorkflowStep')
+        AND jsonb_path_exists(payload::jsonb,
+          '\$.** ? (@.role == \"Party2\" && @.partyReference.externalReference == \"traderx-matching-engine\")'))::text" \
+    2>/dev/null | tr -d '[:space:]')" || old_parties="unknown"
+  if [[ "${old_parties}" == "true" ]]; then
+    echo "[error] data volume ${DATA_VOLUME_NAME} holds CDM data from a 017 build before the dealer/client"
+    echo "[error] party model (the matching engine as counterparty Party2); it would be read with the wrong parties"
+    echo "[hint] rerun with --reset-data to remove the volume and start with a fresh database:"
+    echo "[hint]   ./scripts/start-state-017-cdm-lifecycle-mapping-generated.sh --reset-data"
+    compose stop database >/dev/null 2>&1 || true
+    return 1
+  elif [[ "${old_parties}" != "false" ]]; then
+    echo "[warn] could not check data volume ${DATA_VOLUME_NAME} for data from before the dealer/client party model"
+  fi
 }
 
 if (( DRY_RUN == 1 )); then

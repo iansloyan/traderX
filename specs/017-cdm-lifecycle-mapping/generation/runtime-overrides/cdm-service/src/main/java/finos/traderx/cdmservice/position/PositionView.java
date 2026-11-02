@@ -2,9 +2,6 @@ package finos.traderx.cdmservice.position;
 
 import cdm.base.staticdata.asset.common.AssetIdTypeEnum;
 import cdm.base.staticdata.asset.common.Security;
-import cdm.base.staticdata.party.Counterparty;
-import cdm.base.staticdata.party.CounterpartyRoleEnum;
-import cdm.base.staticdata.party.PartyRole;
 import cdm.base.staticdata.party.PartyRoleEnum;
 import cdm.event.common.Lineage;
 import cdm.event.common.Trade;
@@ -28,6 +25,7 @@ import com.regnosys.rosetta.common.hashing.NonNullHashCollector;
 import com.rosetta.model.lib.RosettaModelObject;
 import com.rosetta.model.lib.RosettaModelObjectBuilder;
 import com.rosetta.model.metafields.MetaFields;
+import finos.traderx.cdmservice.lifecycle.CdmLifecycle;
 import finos.traderx.cdmservice.lifecycle.CdmProducts;
 import finos.traderx.cdmservice.lifecycle.Side;
 import finos.traderx.cdmservice.ref.CdmRef;
@@ -362,12 +360,7 @@ public class PositionView {
   }
 
   private static String role(Trade trade, PartyRoleEnum role) {
-    return trade.getPartyRole() == null ? null : trade.getPartyRole().stream()
-        .filter(r -> r.getRole() == role)
-        .map(PartyRole::getPartyReference)
-        .filter(Objects::nonNull)
-        .map(r -> r.getExternalReference())
-        .findFirst().orElse(null);
+    return CdmLifecycle.roleKey(trade.getPartyRole(), role);
   }
 
   private static PriceQuantity priceQuantity(Trade trade) {

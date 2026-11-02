@@ -509,8 +509,10 @@ TraderX has no product, currency or settlement terms. These defaults are stated,
   TraderX account). TraderX is read as a dealer's trading system: its users are traders of the TraderX
   group booking business for clients, and the dealer trades as principal with each client. The
   account users are not copied onto trades: they are entitlements, and copying them would change every
-  trade when a user is added. Each order, fill and trade keeps the subsidiary it was mapped with, so
-  switching an account's subsidiary changes later events only.
+  trade when a user is added. Each order and direct trade keeps the subsidiary it was mapped with,
+  and each fill takes its order's (Ruling R75), so switching an account's subsidiary changes later
+  orders and direct trades only, never the fills of an order already placed. A rejected request
+  with no account id faces the default subsidiary (Ruling R76).
 - **The venue is not a counterparty.** The matcher is a third party on orders and fills, in the role
   `ExecutionFacility` and as `executionVenue`; it still approves each order against the market
   (`WorkflowStepApproval`, gap G14). Direct trades have no venue.

@@ -316,6 +316,18 @@ class WorkflowMapperTest {
   }
 
   @Test
+  void rejectedRequestWithoutAccountIdFacesTheDefaultSubsidiary() {
+    RejectedOrder noAccount = new RejectedOrder("rej-017-0003", null, "IBM", "Buy", 100, null,
+        "invalid order payload", LifecycleFixtures.ORDER_AT);
+
+    WorkflowStep proposal = WORKFLOW.rejectedProposal(noAccount);
+
+    assertThat(CdmLifecycle.counterpartyKey(WorkflowMapper.executionInstruction(proposal)
+        .getCounterparty(), CdmLifecycle.DEALER)).isEqualTo("traderx-nyc");
+    assertThat(WORKFLOW.rejected(noAccount)).isNotNull();
+  }
+
+  @Test
   void rejectedRequestWithUnknownValuesIsMappedAndReportedInvalid() {
     RejectedOrder bad = new RejectedOrder("rej-017-0002", 99999, "NOPE", null, -5, null,
         "invalid order payload", LifecycleFixtures.ORDER_AT);

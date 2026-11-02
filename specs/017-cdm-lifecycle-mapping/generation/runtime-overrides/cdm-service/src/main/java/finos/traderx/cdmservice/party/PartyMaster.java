@@ -425,6 +425,11 @@ public class PartyMaster implements CdmMaster {
     return key != null && entitySeed.isEntity(key);
   }
 
+  /** The default TraderX subsidiary (seed {@code defaultEntity}), facing accounts without an assignment. */
+  public Party defaultEntity() {
+    return entity(entitySeed.defaultEntity()).orElseThrow();
+  }
+
   /**
    * The subsidiary facing {@code accountId}: its party's {@code account.servicingParty}, or the
    * seed assignment for an account party that has none.

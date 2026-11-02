@@ -98,8 +98,9 @@ in a TraderX side table.
 - **Choosing a subsidiary:** `PUT /cdm-service/cdm/parties/{accountId}/servicing-party` with
   `{"entity": "traderx-ldn"}` stores a new version of the client party. The CDM tab's party card shows
   the facing subsidiary with a selector that calls it.
-- **Trades keep the subsidiary they were booked with.** Each order, fill and trade carries its own copy of the
-  parties, taken when the event is mapped, so changing an account's subsidiary affects later events only.
+- **Trades keep the subsidiary they were booked with.** Each order and direct trade carries its own copy
+  of the parties, taken when the event is mapped, and each fill takes its order's dealer (Ruling R75), so
+  changing an account's subsidiary affects later orders and direct trades only.
   The lineage APIs report the subsidiary actually on the object.
 
 ## 5. Proposed: parties and roles per object

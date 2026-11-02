@@ -6290,7 +6290,7 @@ index 0000000..faf7cfd
 +.cdm-table { font-size: 0.8rem; }
 diff --git a/web-front-end/angular/main/app/cdm/cdm-home.component.html b/web-front-end/angular/main/app/cdm/cdm-home.component.html
 new file mode 100644
-index 0000000..9aae9f3
+index 0000000..688c653
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-home.component.html
 @@ -0,0 +1,206 @@
@@ -6311,7 +6311,7 @@ index 0000000..9aae9f3
 +             title="TraderX subsidiary that services this client and trades with it as dealer (Party1): CDM Account.servicingParty">Serviced by</label>
 +      <select id="cdmHomeServicing" class="form-select form-select-sm cdm-home-servicing-select"
 +              [disabled]="servicingSaving || !entities.length"
-+              (change)="changeServicingEntity($any($event.target).value)">
++              (change)="changeServicingEntity($any($event.target).value, $any($event.target))">
 +        <option *ngIf="!servicingKey(account)" value="" selected>—</option>
 +        <option *ngFor="let entity of entities" [value]="entity.externalKey"
 +                [selected]="entity.externalKey === servicingKey(account)">{{ entity.name }}</option>
@@ -6521,10 +6521,10 @@ index 0000000..ad6daf3
 +.cdm-home-servicing-select { width: auto; min-width: 9rem; }
 diff --git a/web-front-end/angular/main/app/cdm/cdm-home.component.spec.ts b/web-front-end/angular/main/app/cdm/cdm-home.component.spec.ts
 new file mode 100644
-index 0000000..5c32e0c
+index 0000000..b903442
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-home.component.spec.ts
-@@ -0,0 +1,191 @@
+@@ -0,0 +1,205 @@
 +import { NO_ERRORS_SCHEMA } from '@angular/core';
 +import { ComponentFixture, TestBed } from '@angular/core/testing';
 +import { ActivatedRoute, convertToParamMap, provideRouter, Router, RouterModule } from '@angular/router';
@@ -6635,6 +6635,20 @@ index 0000000..5c32e0c
 +        expect(text(tky)).toContain('Test Account 20 (22214)');
 +    });
 +
++    it('putsTheSelectBackWhenTheSwitchFails', () => {
++        cdm.setServicingParty.and.returnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
++        const root = render();
++        const select = root.querySelector('.cdm-home-servicing-select') as HTMLSelectElement;
++
++        select.value = 'traderx-tky';
++        select.dispatchEvent(new Event('change'));
++        fixture.detectChanges();
++
++        expect(select.value).toBe('traderx-nyc');
++        expect(root.querySelector('.cdm-home-servicing')!.textContent).toContain('Could not change the servicing subsidiary');
++        expect(root.querySelector('.cdm-relationships tr[data-entity="traderx-nyc"]')!.textContent).toContain('Test Account 20');
++    });
++
 +    it('listsTradingRelationshipsBySubsidiary', () => {
 +        const root = render();
 +        const rows = Array.from(root.querySelectorAll('.cdm-relationships tbody tr')) as HTMLElement[];
@@ -6718,10 +6732,10 @@ index 0000000..5c32e0c
 +});
 diff --git a/web-front-end/angular/main/app/cdm/cdm-home.component.ts b/web-front-end/angular/main/app/cdm/cdm-home.component.ts
 new file mode 100644
-index 0000000..8d1dd2b
+index 0000000..d8b6680
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-home.component.ts
-@@ -0,0 +1,277 @@
+@@ -0,0 +1,281 @@
 +import { Component, OnDestroy, OnInit } from '@angular/core';
 +import { ActivatedRoute, Router } from '@angular/router';
 +import { from, of, Subscription } from 'rxjs';
@@ -6846,7 +6860,7 @@ index 0000000..8d1dd2b
 +    }
 +
 +    /** Makes another subsidiary service the selected account; later orders and trades face it. */
-+    changeServicingEntity(entity: string): void {
++    changeServicingEntity(entity: string, select?: HTMLSelectElement): void {
 +        const account = this.account;
 +        if (!account || !entity || entity === this.servicingKey(account)) {
 +            return;
@@ -6864,6 +6878,10 @@ index 0000000..8d1dd2b
 +            error: () => {
 +                this.servicingError = 'Could not change the servicing subsidiary';
 +                this.servicingSaving = false;
++                // the select shows the user's choice; put it back to the subsidiary that still applies
++                if (select) {
++                    select.value = this.servicingKey(account) ?? '';
++                }
 +            }
 +        }));
 +    }
@@ -7278,7 +7296,7 @@ index 0000000..f046ab0
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.html b/web-front-end/angular/main/app/cdm/cdm-view.component.html
 new file mode 100644
-index 0000000..c5c3b61
+index 0000000..425e3d6
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.html
 @@ -0,0 +1,398 @@
@@ -7531,7 +7549,7 @@ index 0000000..c5c3b61
 +                  <span class="cdm-v">
 +                    <select class="form-select form-select-sm cdm-servicing-select" aria-label="Subsidiary servicing this client"
 +                            [disabled]="servicingSaving || !entities.length"
-+                            (change)="changeServicingEntity($any($event.target).value)">
++                            (change)="changeServicingEntity($any($event.target).value, $any($event.target))">
 +                      <option *ngIf="!entities.length" [value]="party.servicingEntity">{{ entityName(party.servicingEntity) }}</option>
 +                      <option *ngFor="let entity of entities" [value]="entity.externalKey" [selected]="entity.externalKey === party.servicingEntity">{{ entity.name }}</option>
 +                    </select>
@@ -8424,10 +8442,10 @@ index 0000000..24990d9
 +});
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.ts b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
 new file mode 100644
-index 0000000..ca3cb17
+index 0000000..1873e35
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
-@@ -0,0 +1,709 @@
+@@ -0,0 +1,713 @@
 +import { Component, OnDestroy, OnInit } from '@angular/core';
 +import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
 +import { HttpErrorResponse } from '@angular/common/http';
@@ -8467,7 +8485,6 @@ index 0000000..ca3cb17
 +
 +const TRADE_STATE_TYPE = 'cdm.event.common.TradeState';
 +
-+/** One stored CDM object the page can select: a WorkflowStep, or a trade's TradeState. */
 +/** Step-level fields shown first in a WorkflowStep's raw JSON, before its proposedEvent/businessEvent. */
 +const STEP_FIELDS_FIRST = ['eventIdentifier', 'previousWorkflowStep', 'action', 'workflowState', 'timestamp', 'approval'];
 +
@@ -8491,6 +8508,7 @@ index 0000000..ca3cb17
 +    return ordered;
 +}
 +
++/** One stored CDM object the page can select: a WorkflowStep, or a trade's TradeState. */
 +export interface ChainNode {
 +    id: string;
 +    nodeType: 'step' | 'tradeState';
@@ -9102,7 +9120,6 @@ index 0000000..ca3cb17
 +        }
 +    }
 +
-+    /** Name of the subsidiary with this key, or the key. */
 +    /** True when the account's current servicing subsidiary is not the dealer recorded on this order or trade. */
 +    dealerChanged(): boolean {
 +        const current = this.accountParty?.servicingEntity;
@@ -9110,12 +9127,13 @@ index 0000000..ca3cb17
 +        return !!current && !!recorded && current !== recorded;
 +    }
 +
-+        entityName(key: string | null): string {
++    /** Name of the subsidiary with this key, or the key. */
++    entityName(key: string | null): string {
 +        return this.entities.find((entity) => entity.externalKey === key)?.name ?? key ?? '-';
 +    }
 +
 +    /** Makes another subsidiary service the client; later orders and trades face it. */
-+    changeServicingEntity(entity: string): void {
++    changeServicingEntity(entity: string, select?: HTMLSelectElement): void {
 +        if (this.accountId == null || !entity || entity === this.accountParty?.servicingEntity) {
 +            return;
 +        }
@@ -9129,6 +9147,10 @@ index 0000000..ca3cb17
 +            error: () => {
 +                this.servicingError = 'Could not change the servicing subsidiary';
 +                this.servicingSaving = false;
++                // the select shows the user's choice; put it back to the subsidiary that still applies
++                if (select) {
++                    select.value = this.accountParty?.servicingEntity ?? '';
++                }
 +            }
 +        }));
 +    }

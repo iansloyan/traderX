@@ -1049,6 +1049,10 @@ scenario_h() {
     --arg e "${original}"
   target="traderx-tky"
   [[ "${original}" == "${target}" ]] && target="traderx-ldn"
+  # An order placed before the switch, out of the money so only the force-fill below fills it.
+  local open_order=""
+  create_order 200 "$(limit_at 0.5)"
+  open_order="${ORDER_ID}"
   fetch PUT "${CDM}/cdm/parties/${ACCOUNT_ID}/servicing-party" "$(jq -n -c --arg e "${target}" '{entity: $e}')"
   if [[ "${STATUS}" == "200" ]] && jq_true "${BODY}" '.account.servicingParty.externalReference == $e' --arg e "${target}"; then
     pass "(h) servicing party switched ${original} -> ${target}"
@@ -1058,6 +1062,21 @@ scenario_h() {
   fi
   expect "(h) account-service reflects the switch" "${INGRESS_URL}/account-service/account/${ACCOUNT_ID}" \
     '.servicingPartyRef == ("cdm:party:" + $e)' --arg e "${target}"
+  if [[ -n "${open_order}" ]]; then
+    fetch POST "${INGRESS_URL}/order-matcher/orders/${open_order}/force-fill?quantity=200"
+    expect_order "(h) an order placed before the switch keeps ${original} as dealer on its fill" "${open_order}" \
+      '.parties.dealer.cdmRef == ("cdm:party:" + $e) and (.fills | length) == 1
+       and .fills[0].tradeState.validation.status == "VALID" and (.failures | length) == 0' \
+      --arg e "${original}"
+    if [[ -n "$(jq_out "${BODY}" '.fills[0].tradeId // empty' -r)" ]]; then
+      expect "(h) that fill's trade state faces ${original} as Party1" \
+        "${CDM}/cdm/resolve/cdm:trade:$(jq_out "${BODY}" '.fills[0].tradeId' -r)" \
+        '[.trade.counterparty[] | select(.role == "Party1") | .partyReference.externalReference][0] == $e' \
+        --arg e "${original}"
+    fi
+  else
+    fail "(h) order placed before the switch" "HTTP ${STATUS}: ${BODY}"
+  fi
   fetch PUT "${CDM}/cdm/parties/${ACCOUNT_ID}/servicing-party" '{"entity":"traderx-par"}'
   if [[ "${STATUS}" == "400" ]]; then
     pass "(h) an unknown subsidiary is rejected with 400"

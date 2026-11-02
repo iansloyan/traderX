@@ -20,9 +20,10 @@ public interface LifecycleReferenceData {
 
   /**
    * The TraderX subsidiary facing account {@code accountId} (the dealer, {@code Party1}): the
-   * account's {@code servicingParty}, or the seed assignment for an unknown account.
+   * account's {@code servicingParty}, the seed assignment for an unknown account, or the default
+   * subsidiary when there is no account id (a rejected request may have none).
    */
-  Party dealer(int accountId);
+  Party dealer(Integer accountId);
 
   /** The execution venue party (the TraderX order matcher). */
   Party venue();
@@ -41,8 +42,8 @@ public interface LifecycleReferenceData {
       }
 
       @Override
-      public Party dealer(int accountId) {
-        return parties.facingEntity(accountId);
+      public Party dealer(Integer accountId) {
+        return accountId == null ? parties.defaultEntity() : parties.facingEntity(accountId);
       }
 
       @Override

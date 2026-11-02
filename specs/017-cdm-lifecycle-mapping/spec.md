@@ -53,9 +53,11 @@ in `scripts/test-state-017-cdm-lifecycle-mapping.sh` (see `tests/smoke/README.md
   whose `servicingParty` is the subsidiary facing it, seeded per `entities.json` and changeable with
   `PUT /cdm/parties/{accountId}/servicing-party`; that subsidiary SHALL be `Party1` (roles
   `ExecutingEntity`, `BookingParty`) and the client `Party2` (role `Client`) of every order, fill and
-  trade of the account, as at the time the event is mapped (Ruling R69). Tests:
+  trade of the account, as at the time the order or direct trade is mapped; a fill SHALL keep its order's dealer (Rulings R69, R75). Tests:
   `PartyMasterTest.seedStoresSubsidiariesAndAssignsEachAccountItsFacingSubsidiary`,
   `.servicingEntityCanBeSwitchedAndUnknownOnesAreRejected`,
+  `ExecutionMapperTest.fillKeepsItsOrdersDealerAfterTheAccountsSubsidiaryIsSwitched`,
+  `WorkflowMapperTest.rejectedRequestWithoutAccountIdFacesTheDefaultSubsidiary`,
   `WorkflowMapperTest.proposedStepIsDealerAgainstClientWithVenueAsFacility`, scenario (h).
 - FR-01704: account-service SHALL serve accounts and account users as projections of the CDM parties,
   each account with the subsidiary servicing it (`servicingPartyRef`, `servicingPartyName`), and

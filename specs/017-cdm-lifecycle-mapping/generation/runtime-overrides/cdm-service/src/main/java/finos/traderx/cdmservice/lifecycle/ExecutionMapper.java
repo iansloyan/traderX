@@ -5,9 +5,7 @@ import static finos.traderx.cdmservice.lifecycle.CdmLifecycle.TRADE_ID_SCHEME;
 
 import cdm.base.staticdata.asset.common.AssetIdTypeEnum;
 import cdm.base.staticdata.asset.common.Security;
-import cdm.base.staticdata.party.Counterparty;
-import cdm.base.staticdata.party.CounterpartyRoleEnum;
-import cdm.base.staticdata.party.PartyRole;
+import cdm.base.staticdata.party.Party;
 import cdm.base.staticdata.party.PartyRoleEnum;
 import cdm.event.common.BusinessEvent;
 import cdm.event.common.ExecutionInstruction;
@@ -149,7 +147,8 @@ public final class ExecutionMapper {
     }
     ExecutionInstruction ordered = requireProposal(orderProposal, trade);
     WorkflowStep proposed = workflow.proposedStep(
-        tradeInstruction(trade, ExecutionTypeEnum.ON_VENUE, true), trade.created(),
+        tradeInstruction(trade, ExecutionTypeEnum.ON_VENUE, true, orderDealer(ordered, trade)),
+        trade.created(),
         List.of(CdmLifecycle.identifier(trade.orderId(), ORDER_ID_SCHEME, 1),
             CdmLifecycle.identifier(trade.id(), FILL_ID_SCHEME, 1)),
         trade.id());
@@ -169,7 +168,8 @@ public final class ExecutionMapper {
           + trade.orderId() + "; it is not a direct trade");
     }
     WorkflowStep proposed = workflow.proposedStep(
-        tradeInstruction(trade, ExecutionTypeEnum.OFF_FACILITY, false), trade.created(),
+        tradeInstruction(trade, ExecutionTypeEnum.OFF_FACILITY, false,
+            referenceData.dealer(trade.accountId())), trade.created(),
         List.of(CdmLifecycle.identifier(trade.id(), TRADE_ID_SCHEME, 1)), trade.id());
     return new FillWorkflow(proposed, accept(proposed, trade), List.of());
   }
@@ -180,12 +180,12 @@ public final class ExecutionMapper {
    * execution facility if {@code onVenue}, identified by the trade id.
    */
   private ExecutionInstruction tradeInstruction(BookedTrade trade,
-      ExecutionTypeEnum executionType, boolean onVenue) {
+      ExecutionTypeEnum executionType, boolean onVenue, Party dealer) {
     Side side = CdmLifecycle.requireSide(trade.side());
     return CdmLifecycle.executionInstruction(
         products.cashEquity(CdmLifecycle.requireSecurity(referenceData, trade.security()), side),
         side, CdmLifecycle.requireAccount(referenceData, trade.accountId()),
-        referenceData.dealer(trade.accountId()), onVenue ? referenceData.venue() : null,
+        dealer, onVenue ? referenceData.venue() : null,
         CdmProducts.priceQuantity(trade.price(), trade.quantity(), true),
         trade.created(), List.of(CdmLifecycle.tradeIdentifier(trade.id(), TRADE_ID_SCHEME)),
         executionType);
@@ -315,6 +315,24 @@ public final class ExecutionMapper {
     return ordered;
   }
 
+  /**
+   * The dealer of a fill: the order's own dealer ({@code Party1} of its instruction), so a fill
+   * keeps the subsidiary its order was placed with even if the account's servicing subsidiary
+   * has changed since (Ruling R75). An order instruction without one (mapped before Ruling R69)
+   * falls back to the account's current subsidiary.
+   */
+  private Party orderDealer(ExecutionInstruction ordered, BookedTrade trade) {
+    String key = CdmLifecycle.counterpartyKey(ordered.getCounterparty(), CdmLifecycle.DEALER);
+    if (key != null && ordered.getParties() != null) {
+      for (Party party : ordered.getParties()) {
+        if (party.getMeta() != null && key.equals(party.getMeta().getExternalKey())) {
+          return party;
+        }
+      }
+    }
+    return referenceData.dealer(trade.accountId());
+  }
+
   /** How {@code trade} differs from the order's instruction: side, security, account. */
   private static List<String> mismatches(ExecutionInstruction ordered, BookedTrade trade) {
     List<String> mismatches = new ArrayList<>();
@@ -324,11 +342,7 @@ public final class ExecutionMapper {
       mismatches.add(MISMATCH_PREFIX + "account " + trade.accountId() + " but the order's is "
           + account);
     }
-    String buyer = ordered.getPartyRoles().stream()
-        .filter(r -> r.getRole() == PartyRoleEnum.BUYER)
-        .map(PartyRole::getPartyReference)
-        .map(r -> r.getExternalReference())
-        .findFirst().orElse(null);
+    String buyer = CdmLifecycle.roleKey(ordered.getPartyRoles(), PartyRoleEnum.BUYER);
     Side orderedSide = buyer == null ? null : buyer.equals(account) ? Side.BUY : Side.SELL;
     Side tradeSide = Side.parse(trade.side());
     if (orderedSide != tradeSide) {

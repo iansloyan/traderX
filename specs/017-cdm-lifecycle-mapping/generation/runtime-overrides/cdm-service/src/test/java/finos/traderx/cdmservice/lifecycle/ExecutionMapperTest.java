@@ -283,6 +283,45 @@ class ExecutionMapperTest {
   }
 
   @Test
+  void fillKeepsItsOrdersDealerAfterTheAccountsSubsidiaryIsSwitched() {
+    // The order was placed while NYC serviced the account; LDN services it by the time it fills.
+    cdm.base.staticdata.party.Party ldn = PartyMapper.entityParty(
+        new finos.traderx.cdmservice.party.EntitySeed.Entity("traderx-ldn", "TraderX LDN"));
+    LifecycleReferenceData switched = new LifecycleReferenceData() {
+      @Override
+      public java.util.Optional<cdm.base.staticdata.asset.common.Security> security(String ticker) {
+        return LifecycleFixtures.REFERENCE_DATA.security(ticker);
+      }
+
+      @Override
+      public java.util.Optional<cdm.base.staticdata.party.Party> account(int accountId) {
+        return LifecycleFixtures.REFERENCE_DATA.account(accountId);
+      }
+
+      @Override
+      public cdm.base.staticdata.party.Party dealer(Integer accountId) {
+        return ldn;
+      }
+
+      @Override
+      public cdm.base.staticdata.party.Party venue() {
+        return LifecycleFixtures.REFERENCE_DATA.venue();
+      }
+    };
+    ExecutionMapper afterSwitch = new ExecutionMapper(LifecycleFixtures.INJECTOR, switched);
+
+    ExecutionMapper.FillWorkflow fill = afterSwitch.fill(approved, fill1());
+
+    assertThat(CdmLifecycle.counterpartyKey(fill.after().getTrade().getCounterparty(),
+        CdmLifecycle.DEALER)).isEqualTo("traderx-nyc");
+    assertThat(fill.mismatches()).isEmpty();
+    assertValid(VALIDATOR.validate(fill.accepted()));
+    // A direct trade booked after the switch faces the new subsidiary.
+    assertThat(CdmLifecycle.counterpartyKey(afterSwitch.direct(directTrade()).after().getTrade()
+        .getCounterparty(), CdmLifecycle.DEALER)).isEqualTo("traderx-ldn");
+  }
+
+  @Test
   void fillIsOnVenueDirectIsOffFacilityWithoutVenue() {
     ExecutionMapper.FillWorkflow fill = EXECUTION.fill(approved, fill1());
     ExecutionMapper.FillWorkflow direct = EXECUTION.direct(directTrade());

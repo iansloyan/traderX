@@ -1,9 +1,7 @@
 package finos.traderx.cdmservice.api;
 
 import cdm.base.staticdata.asset.common.Security;
-import cdm.base.staticdata.party.Counterparty;
 import cdm.base.staticdata.party.CounterpartyRoleEnum;
-import cdm.base.staticdata.party.PartyRole;
 import cdm.base.staticdata.party.PartyRoleEnum;
 import cdm.event.common.BusinessEvent;
 import cdm.event.common.ExecutionDetails;
@@ -365,22 +363,11 @@ final class CdmApiSupport {
   }
 
   private static String counterparty(Trade trade, CounterpartyRoleEnum role) {
-    return trade == null || trade.getCounterparty() == null ? null
-        : trade.getCounterparty().stream()
-            .filter(c -> c.getRole() == role)
-            .map(Counterparty::getPartyReference)
-            .filter(Objects::nonNull)
-            .map(r -> r.getExternalReference())
-            .findFirst().orElse(null);
+    return trade == null ? null : CdmLifecycle.counterpartyKey(trade.getCounterparty(), role);
   }
 
   private static String role(Trade trade, PartyRoleEnum role) {
-    return trade == null || trade.getPartyRole() == null ? null : trade.getPartyRole().stream()
-        .filter(r -> r.getRole() == role)
-        .map(PartyRole::getPartyReference)
-        .filter(Objects::nonNull)
-        .map(r -> r.getExternalReference())
-        .findFirst().orElse(null);
+    return trade == null ? null : CdmLifecycle.roleKey(trade.getPartyRole(), role);
   }
 
   /** 404 {@code {"cdmRef": ..., "status": "pending"}}: well-formed, nothing stored yet. */
