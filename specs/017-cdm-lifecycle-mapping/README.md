@@ -68,7 +68,9 @@ The **CDM** tab: every order, trade, rejection and position held as validated CD
 ![CDM overview](screenshots/cdm-3-cdm-overview.png)
 
 One order as CDM: the proposal approved by the venue, two partial fills each with its own trade state,
-then a cancel of the remaining 500.
+then a cancel of the remaining 500. The parties card shows the client (`Party2`) with the TraderX
+subsidiary servicing it, that subsidiary as dealer (`Party1`), and the matching engine as execution
+facility, not a counterparty.
 
 ![CDM order lineage](screenshots/cdm-4-order-lineage.png)
 
