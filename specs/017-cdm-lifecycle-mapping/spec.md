@@ -214,7 +214,7 @@ in `scripts/test-state-017-cdm-lifecycle-mapping.sh` (see `tests/smoke/README.md
   and security cards, validation badges, a pending state and the raw CDM JSON, and a CDM link per order
   and trade blotter row. Each client's servicing subsidiary SHALL be visible and changeable without
   opening an order or trade: a **Serviced by** column on the Account tab, and on the CDM overview a
-  selector and a table of trading relationships (Ruling R74). Tests: `cdm-view.component.spec.ts` `rendersOrderAsTreeWithFillsNested`, `labelsTheCurrentServicerAndTheDealerOnThisOrder`, `cdm-home.component.spec.ts` `showsTheSelectedAccountsServicingSubsidiaryAndSwitchesIt`, `listsTradingRelationshipsBySubsidiary`, `account.component.spec.ts` `shows the servicing subsidiary of each account`,
+  selector and a table of trading relationships (Ruling R74). Tests: `cdm-view.component.spec.ts` `rendersOrderAsTreeWithFillsNested`, `labelsTheCurrentServicerAndTheDealerOnThisOrder`, `showsAFillStepsEventIdentifierAndPutsStepFieldsFirstInTheJson`, `stepFieldsFirstLeavesOtherObjectsAlone`, `cdm-home.component.spec.ts` `showsTheSelectedAccountsServicingSubsidiaryAndSwitchesIt`, `listsTradingRelationshipsBySubsidiary`, `account.component.spec.ts` `shows the servicing subsidiary of each account`,
   `showsApprovalBadge`, `showsRejectionReasonInTheApprovalBadge`, `executionTypeCaptionShown`,
   `highlights the fill named in the query`, `tradePageLeadsWithTradeState`, `tradePageLinksProducingFill`,
   `directTradeShowsDirectWorkflow`, `showsInvalidBadgeWhenValidationInvalid`,

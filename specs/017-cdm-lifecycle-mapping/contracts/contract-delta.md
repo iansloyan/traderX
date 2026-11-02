@@ -178,6 +178,10 @@ First-build data is not migrated (Ruling R57).
   "Direct trade" with its two steps). Party and security cards, execution type with its meaning, and
   raw CDM JSON on both. New **CDM** header tab, and a **CDM** link per row in the order and trade
   blotters.
+- The Selected panel of a step shows its `eventIdentifier` (for a fill step, `order-id` and `fill-id`:
+  the link from fill to order) and its `previousWorkflowStep`; a trade state shows its `tradeIdentifier`.
+  A step's raw JSON lists the step-level fields (`eventIdentifier`, `previousWorkflowStep`, `action`,
+  `workflowState`, `timestamp`) before its `proposedEvent` or `businessEvent`; the order is display only.
 - Servicing subsidiary (dealer) of each client, from the CDM account model:
   - **Account** tab: the account list gains a **Serviced by** column (`servicingPartyName`).
   - `/cdm` overview: a **Serviced by** selector next to the account selector (calls

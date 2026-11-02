@@ -83,6 +83,13 @@ facility, not a counterparty.
 
 ![CDM order lineage](screenshots/cdm-4-order-lineage.png)
 
+Selecting a fill's accepted step shows how the fill links to its order: the step's
+`eventIdentifier` carries `order-id` and `fill-id`, and `previousWorkflowStep` points at the fill's
+proposed step. Its business event's `after` is the fill's trade state. In the raw JSON, these step fields
+come before the long business event.
+
+![CDM fill step identifiers](screenshots/cdm-6-fill-step.png)
+
 A trade starts from its CDM `TradeState` and shows the fill workflow that produced it:
 
 ![CDM trade state](screenshots/cdm-5-trade-state.png)

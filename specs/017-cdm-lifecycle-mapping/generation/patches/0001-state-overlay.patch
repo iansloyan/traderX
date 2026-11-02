@@ -7278,10 +7278,10 @@ index 0000000..f046ab0
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.html b/web-front-end/angular/main/app/cdm/cdm-view.component.html
 new file mode 100644
-index 0000000..4ece29d
+index 0000000..c5c3b61
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.html
-@@ -0,0 +1,386 @@
+@@ -0,0 +1,398 @@
 +<div class="cdm-view-container p-4">
 +  <div class="d-flex flex-wrap align-items-baseline gap-3 mb-1">
 +    <a class="small" routerLink="/cdm">&larr; CDM overview</a>
@@ -7613,6 +7613,18 @@ index 0000000..4ece29d
 +            <div class="cdm-kv"><span class="cdm-k" title="SHA-256 of the canonical JSON; versions are chained by it">storeGlobalKey</span><span class="cdm-v"><code class="cdm-key">{{ node.storeGlobalKey || '-' }}</code></span></div>
 +            <div class="cdm-kv"><span class="cdm-k" title="Rune meta.globalKey; CDM references such as previousWorkflowStep use it">cdmGlobalKey</span><span class="cdm-v"><code>{{ node.cdmGlobalKey || '-' }}</code></span></div>
 +            <div class="cdm-kv"><span class="cdm-k">previous</span><span class="cdm-v"><code class="cdm-key">{{ node.previousStoreGlobalKey || '-' }}</code></span></div>
++            <div class="cdm-kv cdm-selected-identifiers" *ngIf="selectedIdentifiers.length">
++              <span class="cdm-k" [title]="node.nodeType === 'step' ? 'WorkflowStep.eventIdentifier: links a fill step to its order by order-id' : 'Trade.tradeIdentifier'">{{ node.nodeType === 'step' ? 'eventIdentifier' : 'tradeIdentifier' }}</span>
++              <span class="cdm-v">
++                <span *ngFor="let identifier of selectedIdentifiers; let last = last" class="cdm-identifier">
++                  <span class="text-muted">{{ identifier.scheme }}</span> = <code>{{ identifier.value }}</code><small class="text-muted" *ngIf="identifier.version != null"> v{{ identifier.version }}</small><span *ngIf="!last"> · </span>
++                </span>
++              </span>
++            </div>
++            <div class="cdm-kv cdm-selected-previous-step" *ngIf="selectedPreviousStep as previous">
++              <span class="cdm-k" title="CDM WorkflowStep.previousWorkflowStep: the step this one follows">previousWorkflowStep</span>
++              <span class="cdm-v"><code>{{ previous.globalReference || '-' }}</code><small class="text-muted ms-2">{{ previous.externalReference }}</small></span>
++            </div>
 +            <div class="cdm-kv" *ngIf="node.validation?.messages?.length">
 +              <span class="cdm-k">validation</span>
 +              <span class="cdm-v"><ul class="cdm-validation-messages mb-0"><li *ngFor="let message of node.validation?.messages">{{ message }}</li></ul></span>
@@ -7811,14 +7823,14 @@ index 0000000..85b3156
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts b/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts
 new file mode 100644
-index 0000000..962c994
+index 0000000..24990d9
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts
-@@ -0,0 +1,557 @@
+@@ -0,0 +1,595 @@
 +import { ComponentFixture, TestBed } from '@angular/core/testing';
 +import { ActivatedRoute, convertToParamMap, provideRouter, RouterModule } from '@angular/router';
 +import { BehaviorSubject, of } from 'rxjs';
-+import { CdmViewComponent } from './cdm-view.component';
++import { CdmViewComponent, stepFieldsFirst } from './cdm-view.component';
 +import {
 +    CdmFill,
 +    CdmLineageStep,
@@ -8142,6 +8154,44 @@ index 0000000..962c994
 +        expect(root.querySelector('.cdm-dealer-changed')).toBeNull();
 +    });
 +
++    it('showsAFillStepsEventIdentifierAndPutsStepFieldsFirstInTheJson', () => {
++        const fills = lineage().fills;
++        fills[0].accepted!.object = {
++            businessEvent: { eventDate: '2026-10-29', after: [{ trade: {} }] },
++            previousWorkflowStep: { globalReference: 'f1p', externalReference: 'trd-1:proposed' },
++            timestamp: [{ dateTime: '2026-10-29T10:00:01Z', qualification: 'executionDateTime' }],
++            eventIdentifier: [
++                { issuer: { value: 'TraderX' }, assignedIdentifier: [{ identifier: { value: ORDER_ID, meta: { scheme: 'https://traderx.finos.org/order-id' } }, version: 1 }] },
++                { issuer: { value: 'TraderX' }, assignedIdentifier: [{ identifier: { value: 'trd-1', meta: { scheme: 'https://traderx.finos.org/fill-id' } }, version: 1 }] }
++            ],
++            action: 'New',
++            meta: { globalKey: 'f1a' }
++        };
++        cdm.orderLineage.and.returnValue(of<CdmResult<CdmOrderLineage>>({ status: 'ok', data: lineage({ fills }) }));
++        const root = render();
++        const firstFill = root.querySelectorAll('.cdm-fill')[0] as HTMLElement;
++        (firstFill.querySelector('.cdm-fill-toggle') as HTMLElement).click();
++        fixture.detectChanges();
++        (firstFill.querySelectorAll('.cdm-fill-step')[1] as HTMLElement).click();
++        component.showJson = true;
++        fixture.detectChanges();
++
++        const identifiers = text(root.querySelector('.cdm-selected-identifiers'));
++        expect(identifiers).toContain(`order-id = ${ORDER_ID} v1`);
++        expect(identifiers).toContain('fill-id = trd-1 v1');
++        expect(text(root.querySelector('.cdm-selected-previous-step'))).toContain('f1p');
++        const json = root.querySelector('.cdm-json')!.textContent!;
++        expect(json.indexOf('"eventIdentifier"')).toBeLessThan(json.indexOf('"businessEvent"'));
++        expect(json.indexOf('"previousWorkflowStep"')).toBeLessThan(json.indexOf('"businessEvent"'));
++    });
++
++    it('stepFieldsFirstLeavesOtherObjectsAlone', () => {
++        const tradeState = { trade: { tradeIdentifier: [] }, state: {}, meta: {} };
++        expect(stepFieldsFirst(tradeState)).toBe(tradeState);
++        const ordered = stepFieldsFirst({ proposedEvent: {}, timestamp: [], eventIdentifier: [], action: 'New', meta: {} });
++        expect(Object.keys(ordered)).toEqual(['eventIdentifier', 'action', 'timestamp', 'proposedEvent', 'meta']);
++    });
++
 +    it('showsApprovalBadge', () => {
 +        const root = render();
 +        expect(text(root.querySelector('.cdm-step-proposal .cdm-approval'))).toBe('Approved by TraderX Matching Engine');
@@ -8374,10 +8424,10 @@ index 0000000..962c994
 +});
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.ts b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
 new file mode 100644
-index 0000000..292e911
+index 0000000..ca3cb17
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
-@@ -0,0 +1,662 @@
+@@ -0,0 +1,709 @@
 +import { Component, OnDestroy, OnInit } from '@angular/core';
 +import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
 +import { HttpErrorResponse } from '@angular/common/http';
@@ -8418,6 +8468,29 @@ index 0000000..292e911
 +const TRADE_STATE_TYPE = 'cdm.event.common.TradeState';
 +
 +/** One stored CDM object the page can select: a WorkflowStep, or a trade's TradeState. */
++/** Step-level fields shown first in a WorkflowStep's raw JSON, before its proposedEvent/businessEvent. */
++const STEP_FIELDS_FIRST = ['eventIdentifier', 'previousWorkflowStep', 'action', 'workflowState', 'timestamp', 'approval'];
++
++/** A copy of a WorkflowStep with its step-level fields first; any other object unchanged. */
++export function stepFieldsFirst(object: any): any {
++    if (!object || typeof object !== 'object' || !('eventIdentifier' in object)
++        || !('proposedEvent' in object || 'businessEvent' in object)) {
++        return object;
++    }
++    const ordered: any = {};
++    for (const key of STEP_FIELDS_FIRST) {
++        if (key in object) {
++            ordered[key] = object[key];
++        }
++    }
++    for (const key of Object.keys(object)) {
++        if (!(key in ordered)) {
++            ordered[key] = object[key];
++        }
++    }
++    return ordered;
++}
++
 +export interface ChainNode {
 +    id: string;
 +    nodeType: 'step' | 'tradeState';
@@ -8615,11 +8688,35 @@ index 0000000..292e911
 +        return (this.order?.pending?.trades?.length ?? 0) > 0 || !!this.order?.pending?.cancel;
 +    }
 +
++    /**
++     * Raw JSON of the selected object. For a WorkflowStep the step's own fields (identifiers, the link to
++     * the previous step, action, status) come before its long proposedEvent/businessEvent, so they are
++     * visible without scrolling; JSON field order has no meaning, so the object is unchanged.
++     */
 +    get selectedJson(): string {
 +        if (!this.selected || this.selected.object == null) {
 +            return '';
 +        }
-+        return JSON.stringify(this.selected.object, null, 2);
++        return JSON.stringify(stepFieldsFirst(this.selected.object), null, 2);
++    }
++
++    /** Identifiers of the selected object: a step's eventIdentifier, or a trade state's tradeIdentifier. */
++    get selectedIdentifiers(): { scheme: string; value: string; version: number | null }[] {
++        const object = this.selected?.object;
++        const holders = object?.eventIdentifier ?? object?.trade?.tradeIdentifier ?? [];
++        return (Array.isArray(holders) ? holders : []).flatMap((holder: any) => (holder?.assignedIdentifier ?? [])
++            .map((assigned: any) => ({
++                scheme: String(assigned?.identifier?.meta?.scheme ?? '').replace(/^https:\/\/traderx\.finos\.org\//, ''),
++                value: String(assigned?.identifier?.value ?? ''),
++                version: assigned?.version ?? null
++            })))
++            .filter((identifier: { value: string }) => identifier.value);
++    }
++
++    /** The selected step's CDM previousWorkflowStep (key and external reference), if any. */
++    get selectedPreviousStep(): { globalReference: string | null; externalReference: string | null } | null {
++        const previous = this.selected?.object?.previousWorkflowStep;
++        return previous ? { globalReference: previous.globalReference ?? null, externalReference: previous.externalReference ?? null } : null;
 +    }
 +
 +    select(node: ChainNode | null, event?: Event): void {
