@@ -1,5 +1,5 @@
 diff --git a/account-service/README.md b/account-service/README.md
-index 55504ee..69d43c4 100644
+index 55504ee..bef2b5b 100644
 --- a/account-service/README.md
 +++ b/account-service/README.md
 @@ -15,3 +15,13 @@ This component is synthesized from the TraderSpec Spec Kit manifest for the base
@@ -32,7 +32,7 @@ index 61ad0e2..dd4895c 100644
    },
    "contracts": {
 diff --git a/account-service/openapi.yaml b/account-service/openapi.yaml
-index a9bff85..baaeb5a 100644
+index a9bff85..18c5d7a 100644
 --- a/account-service/openapi.yaml
 +++ b/account-service/openapi.yaml
 @@ -10,18 +10,28 @@ paths:
@@ -135,7 +135,7 @@ index a9bff85..baaeb5a 100644
 +          description: Optional (state 017). Reference of the CDM person, e.g. cdm:person:user01.
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/client/CdmServiceClient.java b/account-service/src/main/java/finos/traderx/accountservice/client/CdmServiceClient.java
 new file mode 100644
-index 0000000..b16b46d
+index 0000000..d4ff67c
 --- /dev/null
 +++ b/account-service/src/main/java/finos/traderx/accountservice/client/CdmServiceClient.java
 @@ -0,0 +1,128 @@
@@ -268,7 +268,7 @@ index 0000000..b16b46d
 +  }
 +}
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/controller/AccountController.java b/account-service/src/main/java/finos/traderx/accountservice/controller/AccountController.java
-index 0c4d2fb..3f718f6 100644
+index 0c4d2fb..8f4ff25 100644
 --- a/account-service/src/main/java/finos/traderx/accountservice/controller/AccountController.java
 +++ b/account-service/src/main/java/finos/traderx/accountservice/controller/AccountController.java
 @@ -1,5 +1,7 @@
@@ -299,7 +299,7 @@ index 0c4d2fb..3f718f6 100644
    public ResponseEntity<String> generalError(Exception e) {
      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/controller/AccountUserController.java b/account-service/src/main/java/finos/traderx/accountservice/controller/AccountUserController.java
-index e9dc860..a23589a 100644
+index e9dc860..005bca5 100644
 --- a/account-service/src/main/java/finos/traderx/accountservice/controller/AccountUserController.java
 +++ b/account-service/src/main/java/finos/traderx/accountservice/controller/AccountUserController.java
 @@ -1,5 +1,7 @@
@@ -371,7 +371,7 @@ index 0000000..8c60031
 +  }
 +}
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/model/Account.java b/account-service/src/main/java/finos/traderx/accountservice/model/Account.java
-index fde8c4d..bc7823a 100644
+index fde8c4d..fb1a410 100644
 --- a/account-service/src/main/java/finos/traderx/accountservice/model/Account.java
 +++ b/account-service/src/main/java/finos/traderx/accountservice/model/Account.java
 @@ -3,6 +3,7 @@ package finos.traderx.accountservice.model;
@@ -397,7 +397,7 @@ index fde8c4d..bc7823a 100644
 +  }
  }
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/model/AccountUser.java b/account-service/src/main/java/finos/traderx/accountservice/model/AccountUser.java
-index 096124c..f2d5c21 100644
+index 096124c..e7d17cf 100644
 --- a/account-service/src/main/java/finos/traderx/accountservice/model/AccountUser.java
 +++ b/account-service/src/main/java/finos/traderx/accountservice/model/AccountUser.java
 @@ -3,6 +3,7 @@ package finos.traderx.accountservice.model;
@@ -569,7 +569,7 @@ index 2f0427d..0000000
 -  }
 -}
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/service/AccountService.java b/account-service/src/main/java/finos/traderx/accountservice/service/AccountService.java
-index ea695b5..364ec53 100644
+index ea695b5..6309208 100644
 --- a/account-service/src/main/java/finos/traderx/accountservice/service/AccountService.java
 +++ b/account-service/src/main/java/finos/traderx/accountservice/service/AccountService.java
 @@ -1,30 +1,39 @@
@@ -620,7 +620,7 @@ index ea695b5..364ec53 100644
    }
  }
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/service/AccountUserService.java b/account-service/src/main/java/finos/traderx/accountservice/service/AccountUserService.java
-index 94faa7d..bf5ea12 100644
+index 94faa7d..a92accb 100644
 --- a/account-service/src/main/java/finos/traderx/accountservice/service/AccountUserService.java
 +++ b/account-service/src/main/java/finos/traderx/accountservice/service/AccountUserService.java
 @@ -1,39 +1,40 @@
@@ -680,7 +680,7 @@ index 94faa7d..bf5ea12 100644
    }
  }
 diff --git a/account-service/src/main/resources/application.properties b/account-service/src/main/resources/application.properties
-index f706ac1..6a60ba1 100644
+index f706ac1..47952af 100644
 --- a/account-service/src/main/resources/application.properties
 +++ b/account-service/src/main/resources/application.properties
 @@ -10,3 +10,7 @@ spring.threads.virtual.enabled=true
@@ -976,7 +976,7 @@ index 0000000..710f0b6
 +}
 diff --git a/cdm-lifecycle-mapping/README.md b/cdm-lifecycle-mapping/README.md
 new file mode 100644
-index 0000000..10720d7
+index 0000000..b4d0572
 --- /dev/null
 +++ b/cdm-lifecycle-mapping/README.md
 @@ -0,0 +1,65 @@
@@ -1047,7 +1047,7 @@ index 0000000..10720d7
 +- Override those values before startup for any shared or long-lived environment.
 diff --git a/cdm-lifecycle-mapping/docker-compose.yml b/cdm-lifecycle-mapping/docker-compose.yml
 new file mode 100644
-index 0000000..b6b7094
+index 0000000..ac21a44
 --- /dev/null
 +++ b/cdm-lifecycle-mapping/docker-compose.yml
 @@ -0,0 +1,381 @@
@@ -1461,7 +1461,7 @@ index 0000000..981da60
 +      preferred_ip_protocol: "ip4"
 diff --git a/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-logs-errors.json b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-logs-errors.json
 new file mode 100644
-index 0000000..66b6d6b
+index 0000000..af31310
 --- /dev/null
 +++ b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-logs-errors.json
 @@ -0,0 +1,158 @@
@@ -1713,7 +1713,7 @@ index 0000000..c6d3a81
 +}
 diff --git a/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-nats-messaging-overview.json b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-nats-messaging-overview.json
 new file mode 100644
-index 0000000..d5a6efd
+index 0000000..8c8b5cc
 --- /dev/null
 +++ b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-nats-messaging-overview.json
 @@ -0,0 +1,19 @@
@@ -1738,7 +1738,7 @@ index 0000000..d5a6efd
 +}
 diff --git a/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-observability-control-plane.json b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-observability-control-plane.json
 new file mode 100644
-index 0000000..ef799d5
+index 0000000..28c38be
 --- /dev/null
 +++ b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-observability-control-plane.json
 @@ -0,0 +1,268 @@
@@ -2012,7 +2012,7 @@ index 0000000..ef799d5
 +}
 diff --git a/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-order-management-observability.json b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-order-management-observability.json
 new file mode 100644
-index 0000000..f7849d0
+index 0000000..4dabcf9
 --- /dev/null
 +++ b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-order-management-observability.json
 @@ -0,0 +1,170 @@
@@ -2437,7 +2437,7 @@ index 0000000..1e099f9
 +}
 diff --git a/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-pricing-pipeline-health.json b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-pricing-pipeline-health.json
 new file mode 100644
-index 0000000..e6c4652
+index 0000000..feebcfd
 --- /dev/null
 +++ b/cdm-lifecycle-mapping/observability/grafana/dashboards/traderx-pricing-pipeline-health.json
 @@ -0,0 +1,20 @@
@@ -3240,7 +3240,7 @@ index 2a1933a..e505d00 100644
  CREATE INDEX idx_orderbook_updatedat ON OrderBook(UpdatedAt);
 diff --git a/order-matcher/src/main/java/finos/traderx/ordermatcher/api/ForceFillRequest.java b/order-matcher/src/main/java/finos/traderx/ordermatcher/api/ForceFillRequest.java
 new file mode 100644
-index 0000000..5dc6215
+index 0000000..7ab40e9
 --- /dev/null
 +++ b/order-matcher/src/main/java/finos/traderx/ordermatcher/api/ForceFillRequest.java
 @@ -0,0 +1,14 @@
@@ -3259,7 +3259,7 @@ index 0000000..5dc6215
 +    }
 +}
 diff --git a/order-matcher/src/main/java/finos/traderx/ordermatcher/api/OrderResponse.java b/order-matcher/src/main/java/finos/traderx/ordermatcher/api/OrderResponse.java
-index 7bee55f..0655d54 100644
+index 7bee55f..deea6a3 100644
 --- a/order-matcher/src/main/java/finos/traderx/ordermatcher/api/OrderResponse.java
 +++ b/order-matcher/src/main/java/finos/traderx/ordermatcher/api/OrderResponse.java
 @@ -21,6 +21,8 @@ public class OrderResponse {
@@ -3435,7 +3435,7 @@ index b76ad49..cdc8642 100644
 +    }
  }
 diff --git a/order-matcher/src/main/java/finos/traderx/ordermatcher/controller/OrderController.java b/order-matcher/src/main/java/finos/traderx/ordermatcher/controller/OrderController.java
-index 04f1d46..95e18ad 100644
+index 04f1d46..905f2e1 100644
 --- a/order-matcher/src/main/java/finos/traderx/ordermatcher/controller/OrderController.java
 +++ b/order-matcher/src/main/java/finos/traderx/ordermatcher/controller/OrderController.java
 @@ -1,5 +1,6 @@
@@ -3481,7 +3481,7 @@ index 04f1d46..95e18ad 100644
          return response;
      }
 diff --git a/order-matcher/src/main/java/finos/traderx/ordermatcher/model/OrderRecord.java b/order-matcher/src/main/java/finos/traderx/ordermatcher/model/OrderRecord.java
-index be5c500..daf8b16 100644
+index be5c500..14c7de8 100644
 --- a/order-matcher/src/main/java/finos/traderx/ordermatcher/model/OrderRecord.java
 +++ b/order-matcher/src/main/java/finos/traderx/ordermatcher/model/OrderRecord.java
 @@ -54,6 +54,10 @@ public class OrderRecord {
@@ -3510,7 +3510,7 @@ index be5c500..daf8b16 100644
 +    }
 +}
 diff --git a/order-matcher/src/main/java/finos/traderx/ordermatcher/service/OrderMatcherService.java b/order-matcher/src/main/java/finos/traderx/ordermatcher/service/OrderMatcherService.java
-index c09543c..290b6da 100644
+index c09543c..f17ffdd 100644
 --- a/order-matcher/src/main/java/finos/traderx/ordermatcher/service/OrderMatcherService.java
 +++ b/order-matcher/src/main/java/finos/traderx/ordermatcher/service/OrderMatcherService.java
 @@ -5,6 +5,7 @@ import finos.traderx.messaging.Publisher;
@@ -3680,7 +3680,7 @@ index c09543c..290b6da 100644
          String orderId,
          int accountId,
 diff --git a/order-matcher/src/main/resources/application.properties b/order-matcher/src/main/resources/application.properties
-index a4dc884..006eba6 100644
+index a4dc884..26c03f4 100644
 --- a/order-matcher/src/main/resources/application.properties
 +++ b/order-matcher/src/main/resources/application.properties
 @@ -15,6 +15,8 @@ order.matcher.trade-service-url=${TRADE_SERVICE_URL:http://${TRADE_SERVICE_HOST:
@@ -3878,7 +3878,7 @@ index 0000000..2003aab
 +}
 diff --git a/order-matcher/src/test/java/finos/traderx/ordermatcher/service/OrderMatcherServiceForceFillTest.java b/order-matcher/src/test/java/finos/traderx/ordermatcher/service/OrderMatcherServiceForceFillTest.java
 new file mode 100644
-index 0000000..1d99fb3
+index 0000000..6bfa112
 --- /dev/null
 +++ b/order-matcher/src/test/java/finos/traderx/ordermatcher/service/OrderMatcherServiceForceFillTest.java
 @@ -0,0 +1,109 @@
@@ -4699,7 +4699,7 @@ index 9201e76..0000000
 -  }
 -]
 diff --git a/people-service/PeopleService.WebApi/Program.cs b/people-service/PeopleService.WebApi/Program.cs
-index f6a53b7..11fd0d4 100644
+index f6a53b7..cbe5ff1 100644
 --- a/people-service/PeopleService.WebApi/Program.cs
 +++ b/people-service/PeopleService.WebApi/Program.cs
 @@ -5,13 +5,31 @@ var builder = WebApplication.CreateBuilder(args);
@@ -4755,7 +4755,7 @@ index 62194eb..10f68b8 100644
    "AllowedHosts": "*"
  }
 diff --git a/people-service/README.md b/people-service/README.md
-index f71f48b..6a46f06 100644
+index f71f48b..6b2a8d9 100644
 --- a/people-service/README.md
 +++ b/people-service/README.md
 @@ -13,4 +13,26 @@ dotnet run
@@ -4845,7 +4845,7 @@ index 0a0961f..c1ef67f 100644
        type: object
        required:
 diff --git a/position-service/src/main/java/finos/traderx/positionservice/model/Position.java b/position-service/src/main/java/finos/traderx/positionservice/model/Position.java
-index 5bf4188..37762dd 100644
+index 5bf4188..c79ecb8 100644
 --- a/position-service/src/main/java/finos/traderx/positionservice/model/Position.java
 +++ b/position-service/src/main/java/finos/traderx/positionservice/model/Position.java
 @@ -49,4 +49,17 @@ public class Position {
@@ -4867,7 +4867,7 @@ index 5bf4188..37762dd 100644
 +  }
  }
 diff --git a/position-service/src/main/java/finos/traderx/positionservice/model/Trade.java b/position-service/src/main/java/finos/traderx/positionservice/model/Trade.java
-index 3512bb1..4c28370 100644
+index 3512bb1..5e97073 100644
 --- a/position-service/src/main/java/finos/traderx/positionservice/model/Trade.java
 +++ b/position-service/src/main/java/finos/traderx/positionservice/model/Trade.java
 @@ -85,4 +85,13 @@ public class Trade {
@@ -4886,7 +4886,7 @@ index 3512bb1..4c28370 100644
  }
 diff --git a/position-service/src/test/java/finos/traderx/positionservice/model/PositionTest.java b/position-service/src/test/java/finos/traderx/positionservice/model/PositionTest.java
 new file mode 100644
-index 0000000..c8837ed
+index 0000000..d56e38c
 --- /dev/null
 +++ b/position-service/src/test/java/finos/traderx/positionservice/model/PositionTest.java
 @@ -0,0 +1,35 @@
@@ -4927,7 +4927,7 @@ index 0000000..c8837ed
 +}
 diff --git a/position-service/src/test/java/finos/traderx/positionservice/model/TradeTest.java b/position-service/src/test/java/finos/traderx/positionservice/model/TradeTest.java
 new file mode 100644
-index 0000000..3bd2ae4
+index 0000000..e5f44c6
 --- /dev/null
 +++ b/position-service/src/test/java/finos/traderx/positionservice/model/TradeTest.java
 @@ -0,0 +1,38 @@
@@ -4970,7 +4970,7 @@ index 0000000..3bd2ae4
 +  }
 +}
 diff --git a/postgres-database-replacement/postgres-init/initialSchema.sql b/postgres-database-replacement/postgres-init/initialSchema.sql
-index 73459d4..29684a4 100644
+index 73459d4..5fe71ab 100644
 --- a/postgres-database-replacement/postgres-init/initialSchema.sql
 +++ b/postgres-database-replacement/postgres-init/initialSchema.sql
 @@ -1,3 +1,7 @@
@@ -6782,10 +6782,10 @@ index 0000000..1571b91
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-presentation.ts b/web-front-end/angular/main/app/cdm/cdm-presentation.ts
 new file mode 100644
-index 0000000..cda5f34
+index 0000000..f046ab0
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-presentation.ts
-@@ -0,0 +1,268 @@
+@@ -0,0 +1,271 @@
 +import { CdmValidation } from './cdm.service';
 +
 +/**
@@ -6899,6 +6899,8 @@ index 0000000..cda5f34
 +    externalKey: string | null;
 +    identifiers: PartyIdentifierView[];
 +    persons: PersonView[];
++    /** Key of the TraderX subsidiary servicing an account party (CDM Account.servicingParty), if any. */
++    servicingEntity: string | null;
 +}
 +
 +/** CDM Party → display model (identifiers, related persons with their roles). */
@@ -6942,7 +6944,8 @@ index 0000000..cda5f34
 +            value: String(partyId?.identifier?.value ?? ''),
 +            scheme: partyId?.identifier?.meta?.scheme ?? null
 +        })).filter((identifier) => identifier.value),
-+        persons
++        persons,
++        servicingEntity: party.account?.servicingParty?.externalReference ?? null
 +    };
 +}
 +
@@ -7056,10 +7059,10 @@ index 0000000..cda5f34
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.html b/web-front-end/angular/main/app/cdm/cdm-view.component.html
 new file mode 100644
-index 0000000..0a7f25d
+index 0000000..4297058
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.html
-@@ -0,0 +1,359 @@
+@@ -0,0 +1,383 @@
 +<div class="cdm-view-container p-4">
 +  <div class="d-flex flex-wrap align-items-baseline gap-3 mb-1">
 +    <a class="small" routerLink="/cdm">&larr; CDM overview</a>
@@ -7244,7 +7247,8 @@ index 0000000..0a7f25d
 +            <div class="cdm-kv"><span class="cdm-k">Quantity</span><span class="cdm-v cdm-trade-quantity">{{ formatQuantity(ts.quantity) }}</span></div>
 +            <div class="cdm-kv"><span class="cdm-k">Price</span><span class="cdm-v cdm-trade-price">{{ formatPrice(ts.price) }}</span></div>
 +            <div class="cdm-kv"><span class="cdm-k">Account</span><span class="cdm-v">{{ ts.account?.name || '-' }} <code class="ms-1" *ngIf="ts.account">{{ ts.account.cdmRef }}</code></span></div>
-+            <div class="cdm-kv"><span class="cdm-k">Venue</span><span class="cdm-v">{{ ts.venue?.name || '-' }} <code class="ms-1" *ngIf="ts.venue">{{ ts.venue.cdmRef }}</code></span></div>
++            <div class="cdm-kv"><span class="cdm-k">Dealer</span><span class="cdm-v cdm-trade-dealer">{{ ts.dealer?.name || '-' }} <code class="ms-1" *ngIf="ts.dealer">{{ ts.dealer.cdmRef }}</code></span></div>
++            <div class="cdm-kv"><span class="cdm-k">Venue</span><span class="cdm-v cdm-trade-venue">{{ ts.venue?.name || 'none (off facility)' }} <code class="ms-1" *ngIf="ts.venue">{{ ts.venue.cdmRef }}</code></span></div>
 +            <div class="cdm-kv"><span class="cdm-k">Security</span><span class="cdm-v">{{ ts.security?.ticker || '-' }}<span class="text-muted" *ngIf="ts.security?.companyName"> · {{ ts.security?.companyName }}</span></span></div>
 +            <div class="cdm-kv"><span class="cdm-k">Position state</span><span class="cdm-v">{{ ts.positionState || '-' }}</span></div>
 +            <div class="cdm-kv" *ngIf="tp.lineage.executionType">
@@ -7296,13 +7300,26 @@ index 0000000..0a7f25d
 +              <div *ngIf="accountParty as party; else noParty">
 +                <div class="cdm-card-title">
 +                  {{ party.name || 'Account' }}
-+                  <span class="badge text-bg-light">Party1 · account</span>
++                  <span class="badge text-bg-light">Party2 · client</span>
 +                </div>
 +                <div class="cdm-kv" *ngFor="let identifier of party.identifiers">
 +                  <span class="cdm-k">partyId</span>
 +                  <span class="cdm-v"><code>{{ identifier.value }}</code><small class="text-muted ms-2">{{ identifier.scheme }}</small></span>
 +                </div>
 +                <div class="cdm-kv"><span class="cdm-k">cdmRef</span><span class="cdm-v"><code>cdm:party:{{ accountId }}</code></span></div>
++                <div class="cdm-kv cdm-servicing">
++                  <span class="cdm-k">Serviced by</span>
++                  <span class="cdm-v">
++                    <select class="form-select form-select-sm cdm-servicing-select" aria-label="Subsidiary servicing this client"
++                            [disabled]="servicingSaving || !entities.length"
++                            (change)="changeServicingEntity($any($event.target).value)">
++                      <option *ngIf="!entities.length" [value]="party.servicingEntity">{{ entityName(party.servicingEntity) }}</option>
++                      <option *ngFor="let entity of entities" [value]="entity.externalKey" [selected]="entity.externalKey === party.servicingEntity">{{ entity.name }}</option>
++                    </select>
++                    <small class="text-muted d-block">CDM Account.servicingParty. Applies to later orders and trades.</small>
++                    <small class="text-danger d-block" *ngIf="servicingError">{{ servicingError }}</small>
++                  </span>
++                </div>
 +                <div class="cdm-persons" *ngIf="party.persons.length">
 +                  <div class="cdm-k mb-1">Related persons</div>
 +                  <div class="cdm-person" *ngFor="let person of party.persons">
@@ -7317,9 +7334,19 @@ index 0000000..0a7f25d
 +              <ng-template #noParty>
 +                <div class="text-muted small">{{ partyError ? 'Account party unavailable' : (accountId != null ? 'Loading account party…' : 'No account party in this lineage') }}</div>
 +              </ng-template>
++              <ng-container *ngIf="dealer as d">
++                <hr class="my-2" />
++                <div class="cdm-dealer">
++                  <div class="cdm-card-title">{{ d.name || d.cdmRef }} <span class="badge text-bg-light">Party1 · dealer</span></div>
++                  <div class="cdm-kv"><span class="cdm-k">cdmRef</span><span class="cdm-v"><code>{{ d.cdmRef }}</code></span></div>
++                  <div class="small text-muted">TraderX subsidiary facing the client here (ExecutingEntity, BookingParty)</div>
++                </div>
++              </ng-container>
 +              <hr class="my-2" />
-+              <div *ngIf="venueParty as venue">
-+                <div class="cdm-card-title">{{ venue.name }} <span class="badge text-bg-light">Party2 · venue</span></div>
++              <div class="text-muted small cdm-no-venue" *ngIf="!venueParty && (order || tradePage)">No venue: booked off facility</div>
++              <div *ngIf="venueParty as venue" class="cdm-venue">
++                <div class="cdm-card-title">{{ venue.name }} <span class="badge text-bg-light">ExecutionFacility · venue</span></div>
++                <div class="small text-muted">Not a counterparty; approves orders against the market</div>
 +                <div class="cdm-kv" *ngFor="let identifier of venue.identifiers">
 +                  <span class="cdm-k">partyId</span>
 +                  <span class="cdm-v"><code>{{ identifier.value }}</code><small class="text-muted ms-2">{{ identifier.scheme }}</small></span>
@@ -7562,10 +7589,10 @@ index 0000000..85b3156
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts b/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts
 new file mode 100644
-index 0000000..6883197
+index 0000000..03a1ff0
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts
-@@ -0,0 +1,512 @@
+@@ -0,0 +1,548 @@
 +import { ComponentFixture, TestBed } from '@angular/core/testing';
 +import { ActivatedRoute, convertToParamMap, provideRouter, RouterModule } from '@angular/router';
 +import { BehaviorSubject, of } from 'rxjs';
@@ -7583,9 +7610,9 @@ index 0000000..6883197
 +
 +const ORDER_ID = 'ord-017-0001';
 +const VALID: CdmValidation = { status: 'VALID', messages: [] };
-+const ORDER_MEANING = 'Sent to the TraderX matching engine (the venue, Party2)';
-+const FILL_MEANING = 'Executed by the TraderX matching engine (the venue, Party2)';
-+const DIRECT_MEANING = 'Booked electronically from the trade ticket, not matched';
++const ORDER_MEANING = 'Sent to the TraderX matching engine (the venue, execution facility)';
++const FILL_MEANING = 'Executed on the TraderX matching engine (the venue, execution facility)';
++const DIRECT_MEANING = 'Booked bilaterally between the TraderX subsidiary and the client from the trade ticket, with no venue';
 +
 +function step(stepType: string, key: string, previous: string | null, extra: Partial<CdmLineageStep> = {}): CdmLineageStep {
 +    return {
@@ -7657,8 +7684,9 @@ index 0000000..6883197
 +            object: { workflowState: { workflowStatus: 'Cancelled', comment: 'Unfilled remainder of 500 shares cancelled' } }
 +        }),
 +        parties: {
-+            account: { cdmRef: 'cdm:party:22214', role: 'Party1', accountId: 22214, name: 'Test Account 20' },
-+            venue: { cdmRef: 'cdm:party:traderx-matching-engine', role: 'Party2', name: 'TraderX Matching Engine' }
++            account: { cdmRef: 'cdm:party:22214', role: 'Party2', accountId: 22214, name: 'Test Account 20' },
++            dealer: { cdmRef: 'cdm:party:traderx-nyc', role: 'Party1', name: 'TraderX NYC' },
++            venue: { cdmRef: 'cdm:party:traderx-matching-engine', role: 'ExecutionFacility', name: 'TraderX Matching Engine' }
 +        },
 +        security: { cdmRef: 'cdm:security:IBM', ticker: 'IBM', companyName: 'International Business Machines' },
 +        failures: [],
@@ -7684,10 +7712,11 @@ index 0000000..6883197
 +            price: direct ? 181.25 : 186.5,
 +            side: direct ? 'Sell' : 'Buy',
 +            account: { cdmRef: 'cdm:party:22214', name: 'Test Account 20' },
-+            venue: { cdmRef: 'cdm:party:traderx-matching-engine', name: 'TraderX Matching Engine' },
++            dealer: { cdmRef: 'cdm:party:traderx-nyc', name: 'TraderX NYC' },
++            venue: direct ? null : { cdmRef: 'cdm:party:traderx-matching-engine', name: 'TraderX Matching Engine' },
 +            security: { cdmRef: 'cdm:security:IBM', ticker: 'IBM', companyName: 'International Business Machines' }
 +        },
-+        executionType: direct ? 'Electronic' : 'OnVenue',
++        executionType: direct ? 'OffFacility' : 'OnVenue',
 +        executionTypeMeaning: direct ? DIRECT_MEANING : FILL_MEANING,
 +        producedBy: direct
 +            ? {
@@ -7741,8 +7770,19 @@ index 0000000..6883197
 +        meta: { externalKey: 'user01' }
 +    }],
 +    personRole: [{ personReference: { externalReference: 'user01' }, role: [{ value: 'Trader' }] }],
++    account: { accountNumber: { value: '22214' }, accountType: { value: 'Client' }, servicingParty: { externalReference: 'traderx-nyc' } },
 +    meta: { externalKey: '22214' }
 +};
++
++const ENTITIES = ['nyc', 'ldn', 'tky'].map((city) => ({
++    partyId: [{ identifier: { value: `traderx-${city}`, meta: { scheme: 'https://traderx.finos.org/entity-id' } } }],
++    name: { value: `TraderX ${city.toUpperCase()}` },
++    meta: { externalKey: `traderx-${city}` }
++}));
++
++function withServicing(party: any, entity: string): any {
++    return { ...party, account: { ...(party.account ?? {}), servicingParty: { externalReference: entity } } };
++}
 +
 +const VENUE_PARTY = {
 +    partyId: [{ identifier: { value: 'traderx-matching-engine', meta: { scheme: 'https://traderx.finos.org/venue-id' } } }],
@@ -7758,7 +7798,9 @@ index 0000000..6883197
 +    let query: BehaviorSubject<any>;
 +
 +    beforeEach(async () => {
-+        cdm = jasmine.createSpyObj<CdmService>('CdmService', ['orderLineage', 'tradeLineage', 'trade', 'party', 'security']);
++        cdm = jasmine.createSpyObj<CdmService>('CdmService', ['orderLineage', 'tradeLineage', 'trade', 'party', 'security', 'entities', 'setServicingParty']);
++        cdm.entities.and.returnValue(of(ENTITIES));
++        cdm.setServicingParty.and.callFake((_id: number, entity: string) => of(withServicing(ACCOUNT_PARTY, entity)));
 +        cdm.orderLineage.and.returnValue(of<CdmResult<CdmOrderLineage>>({ status: 'ok', data: lineage() }));
 +        cdm.party.and.callFake((key: string | number) => of(String(key) === 'traderx-matching-engine' ? VENUE_PARTY : ACCOUNT_PARTY));
 +        cdm.security.and.returnValue(of(SECURITY));
@@ -7844,12 +7886,29 @@ index 0000000..6883197
 +        (firstFill.querySelectorAll('.cdm-fill-step')[1] as HTMLElement).click();
 +        fixture.detectChanges();
 +        expect(root.querySelector('.cdm-selected')!.textContent).toContain('f1a');
-+        // party card: account party, related person with role, venue
++        // party card: client (Party2) with related person and servicing subsidiary, dealer (Party1), venue
 +        const party = text(root.querySelector('.party-card'));
 +        expect(party).toContain('Test Account 20');
++        expect(party).toContain('Party2 · client');
 +        expect(party).toContain('Alice Johnson');
 +        expect(party).toContain('Trader');
-+        expect(party).toContain('TraderX Matching Engine');
++        expect(text(root.querySelector('.cdm-dealer'))).toContain('TraderX NYC');
++        expect(text(root.querySelector('.cdm-dealer'))).toContain('Party1 · dealer');
++        expect(text(root.querySelector('.cdm-venue'))).toContain('TraderX Matching Engine');
++        expect(text(root.querySelector('.cdm-venue'))).toContain('ExecutionFacility · venue');
++        const select = root.querySelector('.cdm-servicing-select') as HTMLSelectElement;
++        expect(Array.from(select.options).map((o) => o.textContent!.trim())).toEqual(['TraderX NYC', 'TraderX LDN', 'TraderX TKY']);
++        expect(select.value).toBe('traderx-nyc');
++    });
++
++    it('changesServicingSubsidiary', () => {
++        const root = render();
++        const select = root.querySelector('.cdm-servicing-select') as HTMLSelectElement;
++        select.value = 'traderx-ldn';
++        select.dispatchEvent(new Event('change'));
++        fixture.detectChanges();
++        expect(cdm.setServicingParty).toHaveBeenCalledWith(22214, 'traderx-ldn');
++        expect(component.accountParty!.servicingEntity).toBe('traderx-ldn');
 +    });
 +
 +    it('showsApprovalBadge', () => {
@@ -8001,9 +8060,13 @@ index 0000000..6883197
 +        expect(Array.from(producedBy.querySelectorAll('.cdm-chain-step .step-label')).map((el) => text(el)))
 +            .toEqual(['Proposed', 'Accepted']);
 +        const card = root.querySelector('.cdm-trade-state-card')!;
-+        expect(text(card.querySelector('.cdm-execution-type'))).toBe('Electronic');
++        expect(text(card.querySelector('.cdm-execution-type'))).toBe('OffFacility');
 +        expect(text(card.querySelector('.cdm-execution-type-meaning'))).toBe(DIRECT_MEANING);
 +        expect(text(card)).toContain('Sell');
++        expect(text(card.querySelector('.cdm-trade-dealer'))).toContain('TraderX NYC');
++        expect(text(card.querySelector('.cdm-trade-venue'))).toContain('none (off facility)');
++        expect(root.querySelector('.cdm-venue')).toBeNull();
++        expect(text(root.querySelector('.cdm-no-venue'))).toContain('No venue');
 +    });
 +
 +    it('shows a trade state without a known producer', () => {
@@ -8080,10 +8143,10 @@ index 0000000..6883197
 +});
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.ts b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
 new file mode 100644
-index 0000000..ae4bffd
+index 0000000..cb28210
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
-@@ -0,0 +1,613 @@
+@@ -0,0 +1,655 @@
 +import { Component, OnDestroy, OnInit } from '@angular/core';
 +import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
 +import { HttpErrorResponse } from '@angular/common/http';
@@ -8234,7 +8297,13 @@ index 0000000..ae4bffd
 +    ticker: string | null = null;
 +    companyName: string | null = null;
 +    accountParty: PartyView | null = null;
++    /** The facing subsidiary on this order or trade (Party1), from the lineage. */
++    dealer: { cdmRef: string; name: string | null } | null = null;
 +    venueParty: PartyView | null = null;
++    /** The TraderX subsidiaries a client can be serviced by (for the selector). */
++    entities: PartyView[] = [];
++    servicingSaving = false;
++    servicingError: string | null = null;
 +    security: SecurityView | null = null;
 +    partyError = false;
 +    securityError = false;
@@ -8413,7 +8482,9 @@ index 0000000..ae4bffd
 +        this.ticker = null;
 +        this.companyName = null;
 +        this.accountParty = null;
++        this.dealer = null;
 +        this.venueParty = null;
++        this.servicingError = null;
 +        this.security = null;
 +        this.partyError = false;
 +        this.securityError = false;
@@ -8682,8 +8753,18 @@ index 0000000..ae4bffd
 +                this.partyError = party === undefined;
 +            }));
 +        }
-+        this.refSubs.push(this.cdm.party(VENUE_KEY).pipe(catchError(() => of(null))).subscribe((venue) => {
-+            this.venueParty = partyView(venue);
++        this.dealer = this.order?.parties?.dealer ?? tradeState?.dealer ?? null;
++        // The venue is shown only where one was used (not on a direct, off-facility trade).
++        const venueRef = this.order?.parties?.venue?.cdmRef ?? tradeState?.venue?.cdmRef
++            ?? (this.order || tradeState ? null : `cdm:party:${VENUE_KEY}`);
++        const venueKey = refKey(venueRef, 'party');
++        if (venueKey) {
++            this.refSubs.push(this.cdm.party(venueKey).pipe(catchError(() => of(null))).subscribe((venue) => {
++                this.venueParty = partyView(venue);
++            }));
++        }
++        this.refSubs.push(this.cdm.entities().pipe(catchError(() => of([]))).subscribe((entities) => {
++            this.entities = (entities ?? []).map((entity) => partyView(entity)).filter((entity): entity is PartyView => entity != null);
 +        }));
 +        if (this.ticker) {
 +            this.refSubs.push(this.cdm.security(this.ticker).pipe(catchError(() => of(undefined))).subscribe((security) => {
@@ -8693,13 +8774,37 @@ index 0000000..ae4bffd
 +        }
 +    }
 +
++    /** Name of the subsidiary with this key, or the key. */
++    entityName(key: string | null): string {
++        return this.entities.find((entity) => entity.externalKey === key)?.name ?? key ?? '-';
++    }
++
++    /** Makes another subsidiary service the client; later orders and trades face it. */
++    changeServicingEntity(entity: string): void {
++        if (this.accountId == null || !entity || entity === this.accountParty?.servicingEntity) {
++            return;
++        }
++        this.servicingSaving = true;
++        this.servicingError = null;
++        this.refSubs.push(this.cdm.setServicingParty(this.accountId, entity).subscribe({
++            next: (party) => {
++                this.accountParty = partyView(party);
++                this.servicingSaving = false;
++            },
++            error: () => {
++                this.servicingError = 'Could not change the servicing subsidiary';
++                this.servicingSaving = false;
++            }
++        }));
++    }
++
 +    private capitalize(value: string): string {
 +        return value.charAt(0).toUpperCase() + value.slice(1);
 +    }
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm.module.ts b/web-front-end/angular/main/app/cdm/cdm.module.ts
 new file mode 100644
-index 0000000..21990ec
+index 0000000..8bcbf2f
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm.module.ts
 @@ -0,0 +1,14 @@
@@ -8719,7 +8824,7 @@ index 0000000..21990ec
 +export class CdmModule { }
 diff --git a/web-front-end/angular/main/app/cdm/cdm.service.spec.ts b/web-front-end/angular/main/app/cdm/cdm.service.spec.ts
 new file mode 100644
-index 0000000..bd5ab11
+index 0000000..6340eba
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm.service.spec.ts
 @@ -0,0 +1,95 @@
@@ -8820,10 +8925,10 @@ index 0000000..bd5ab11
 +});
 diff --git a/web-front-end/angular/main/app/cdm/cdm.service.ts b/web-front-end/angular/main/app/cdm/cdm.service.ts
 new file mode 100644
-index 0000000..a81f854
+index 0000000..69ecae7
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm.service.ts
-@@ -0,0 +1,323 @@
+@@ -0,0 +1,335 @@
 +import { Injectable } from '@angular/core';
 +import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 +import { Observable, of, throwError } from 'rxjs';
@@ -8948,7 +9053,8 @@ index 0000000..a81f854
 +    proposal: CdmProposal;
 +    fills: CdmFill[];
 +    cancel: CdmLineageStep | null;
-+    parties: { account?: CdmPartyRef; venue?: CdmPartyRef };
++    /** account = the client (Party2); dealer = the facing TraderX subsidiary (Party1); venue = the execution facility (absent for a direct trade). */
++    parties: { account?: CdmPartyRef; dealer?: CdmPartyRef; venue?: CdmPartyRef };
 +    security: { cdmRef: string; ticker: string; companyName: string } | null;
 +    failures: CdmLifecycleFailure[];
 +    pending: { trades: CdmPendingEvent[]; cancel: CdmPendingEvent | null };
@@ -8976,6 +9082,7 @@ index 0000000..a81f854
 +    price: number | null;
 +    side: string | null;
 +    account: { cdmRef: string; name: string | null } | null;
++    dealer?: { cdmRef: string; name: string | null } | null;
 +    venue: { cdmRef: string; name: string | null } | null;
 +    security: { cdmRef: string; ticker: string; companyName: string | null } | null;
 +}
@@ -9091,9 +9198,19 @@ index 0000000..a81f854
 +        return this.read<any>(`${this.baseUrl}/resolve/${encodeURIComponent(cdmRef)}`);
 +    }
 +
-+    /** CDM Party of an account id (with its related persons), or the venue party by its key. */
++    /** CDM Party of an account id (with its related persons), or a subsidiary or the venue party by its key. */
 +    party(key: string | number): Observable<any> {
 +        return this.http.get<any>(`${this.baseUrl}/parties/${encodeURIComponent(String(key))}`);
++    }
++
++    /** The TraderX subsidiaries that can face a client (CDM parties). */
++    entities(): Observable<any[]> {
++        return this.http.get<any[]>(`${this.baseUrl}/entities`);
++    }
++
++    /** Makes the subsidiary `entity` face account `accountId` (CDM Account.servicingParty); answers the updated party. */
++    setServicingParty(accountId: number, entity: string): Observable<any> {
++        return this.http.put<any>(`${this.baseUrl}/parties/${encodeURIComponent(String(accountId))}/servicing-party`, { entity });
 +    }
 +
 +    /** CDM Security by ticker (ticker, demo ISIN and demo FIGI identifiers). */
@@ -9160,7 +9277,7 @@ index f488f08..60a0b61 100644
 +    </li>
  </ul>
 diff --git a/web-front-end/angular/main/app/model/order.model.ts b/web-front-end/angular/main/app/model/order.model.ts
-index a2d96f0..530efe3 100644
+index a2d96f0..b9ad540 100644
 --- a/web-front-end/angular/main/app/model/order.model.ts
 +++ b/web-front-end/angular/main/app/model/order.model.ts
 @@ -12,6 +12,12 @@ export interface OrderRecord {
@@ -9177,7 +9294,7 @@ index a2d96f0..530efe3 100644
  
  export interface OrderCreateRequest {
 diff --git a/web-front-end/angular/main/app/routing.ts b/web-front-end/angular/main/app/routing.ts
-index d74c154..017eefd 100644
+index d74c154..016eefd 100644
 --- a/web-front-end/angular/main/app/routing.ts
 +++ b/web-front-end/angular/main/app/routing.ts
 @@ -5,6 +5,8 @@ import { AccountComponent } from './accounts/account.component';
@@ -9221,7 +9338,7 @@ index b9dc36b..a2766ff 100644
          return this.http.post<OrderRecord>(this.ordersUrl, order).pipe(
              catchError(this.handleError)
 diff --git a/web-front-end/angular/main/app/trade/order-blotter/order-blotter.component.ts b/web-front-end/angular/main/app/trade/order-blotter/order-blotter.component.ts
-index 074727e..c1a9ab2 100644
+index 074727e..f1fdbe8 100644
 --- a/web-front-end/angular/main/app/trade/order-blotter/order-blotter.component.ts
 +++ b/web-front-end/angular/main/app/trade/order-blotter/order-blotter.component.ts
 @@ -6,6 +6,8 @@ import { PriceTick } from 'main/app/model/trade.model';
@@ -9281,7 +9398,7 @@ index ebcd7cd..f41bbac 100644
  </ag-grid-angular>
 \ No newline at end of file
 diff --git a/web-front-end/angular/main/app/trade/trade-blotter/trade-blotter.component.ts b/web-front-end/angular/main/app/trade/trade-blotter/trade-blotter.component.ts
-index 4190ae8..e13a519 100644
+index 4190ae8..6a7e0e7 100644
 --- a/web-front-end/angular/main/app/trade/trade-blotter/trade-blotter.component.ts
 +++ b/web-front-end/angular/main/app/trade/trade-blotter/trade-blotter.component.ts
 @@ -1,10 +1,12 @@
@@ -9326,7 +9443,7 @@ index 4190ae8..e13a519 100644
      ngOnChanges(change: SimpleChanges) {
          const scopeChanged =
 diff --git a/web-front-end/angular/main/environments/environment.interface.ts b/web-front-end/angular/main/environments/environment.interface.ts
-index 2a8024c..3aeadb2 100644
+index 2a8024c..c074813 100644
 --- a/web-front-end/angular/main/environments/environment.interface.ts
 +++ b/web-front-end/angular/main/environments/environment.interface.ts
 @@ -17,5 +17,6 @@ export interface Environment {

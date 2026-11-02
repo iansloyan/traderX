@@ -44,8 +44,19 @@ in `scripts/test-state-017-cdm-lifecycle-mapping.sh` (see `tests/smoke/README.md
   `PartyMasterTest.partyEmbedsIdentifierOnlyPersons`, `PartyMasterTest.unknownUserRefResolves`,
   `PartyEndpointsTest.cdmPartyEndpointResolvesFullPersonsFromMaster`.
 - FR-01703: The order matcher SHALL be the venue `Party` `traderx-matching-engine` ("TraderX Matching
-  Engine"), used as counterparty (`Party2`) and execution facility. Tests:
-  `PartyMapperTest.venuePartyHasStableKey`, `PartyMasterTest.seedsTheVenueParty`.
+  Engine"), the `ExecutionFacility` of orders and fills and the approver of orders, never a
+  counterparty (Ruling R69). Tests: `PartyMapperTest.venuePartyHasStableKey`,
+  `PartyMasterTest.seedsTheVenueParty`,
+  `WorkflowMapperTest.proposedStepIsDealerAgainstClientWithVenueAsFacility`.
+- FR-01727: The TraderX group subsidiaries NYC, LDN and TKY (`seed/entities.json`) SHALL each be a CDM
+  `Party` (`cdm:party:traderx-nyc`, …). Each account party SHALL carry a CDM `Account` (type `Client`)
+  whose `servicingParty` is the subsidiary facing it, seeded per `entities.json` and changeable with
+  `PUT /cdm/parties/{accountId}/servicing-party`; that subsidiary SHALL be `Party1` (roles
+  `ExecutingEntity`, `BookingParty`) and the client `Party2` (role `Client`) of every order, fill and
+  trade of the account, as at the time the event is mapped (Ruling R69). Tests:
+  `PartyMasterTest.seedStoresSubsidiariesAndAssignsEachAccountItsFacingSubsidiary`,
+  `.servicingEntityCanBeSwitchedAndUnknownOnesAreRejected`,
+  `WorkflowMapperTest.proposedStepIsDealerAgainstClientWithVenueAsFacility`, scenario (h).
 - FR-01704: account-service SHALL serve accounts and account users as projections of the CDM parties,
   and account creation, update and add-user SHALL go through cdm-service, keeping 009's id semantics
   (sequence ids, upsert with a client id, never overwriting a taken id). Tests:
@@ -77,11 +88,11 @@ in `scripts/test-state-017-cdm-lifecycle-mapping.sh` (see `tests/smoke/README.md
 ### G3: Orders are CDM `ExecutionInstruction` proposals approved by the venue
 
 - FR-01708: A new order SHALL produce a proposed `WorkflowStep` (an `ExecutionInstruction` of the
-  order quantity at the limit price, account as buyer or seller by side, venue as the other,
-  `executionType OnVenue`), and the matcher's acceptance SHALL be recorded as the venue's approval of
+  order quantity at the limit price, the client as buyer or seller by side and the facing subsidiary
+  as the other, the venue as execution facility, `executionType OnVenue`), and the matcher's acceptance SHALL be recorded as the venue's approval of
   that proposal (`WorkflowStepApproval` `approved: true`), not as an accepted step; no step SHALL carry
   an empty business event (Rulings R43, R44). Tests:
-  `WorkflowMapperTest.proposedStepCarriesInstructionWithBuyerAccountSellerVenue`,
+  `WorkflowMapperTest.proposedStepIsDealerAgainstClientWithVenueAsFacility`,
   `.sellMakesAccountSellerAndPayer`, `.approvedProposalCarriesVenueApprovalAndValidates`,
   `.venueApprovalIsNotAnAcceptance`, `.approvedRefusesFillAndRejectedRequestProposals`,
   `LifecycleAdapterTest.newOrderStoresProposalThenApproval`,
@@ -136,10 +147,11 @@ in `scripts/test-state-017-cdm-lifecycle-mapping.sh` (see `tests/smoke/README.md
 - FR-01714: A direct trade (no `orderId`) SHALL produce a proposed → accepted workflow under
   `cdm:direct:<tradeId>` with the same step shapes as a fill, and its `TradeState` under
   `cdm:trade:<tradeId>` produced by that accepted step. Execution type SHALL be `OnVenue` for matcher
-  fills and `Electronic` for direct trades, with its meaning shown wherever the value is (Ruling R53).
+  fills and `OffFacility` for direct trades, which have no venue, with its meaning shown wherever the
+  value is (Rulings R53, R70).
   Tests: `ExecutionMapperTest.directTradeIsProposedThenAcceptedWithItsExecution`,
-  `.directTradeHasSameShapeAsAFill`, `.fillIsOnVenueDirectIsElectronic`,
-  `LifecycleAdapterTest.directTradeUsesDirectRefAndElectronic`, `CdmRefTest.parsesDirect`,
+  `.directTradeHasSameShapeAsAFill`, `.fillIsOnVenueDirectIsOffFacilityWithoutVenue`,
+  `LifecycleAdapterTest.directTradeUsesDirectRefAndOffFacility`, `CdmRefTest.parsesDirect`,
   `LineageControllerTest.executionTypeMeaningPresent`, scenario (a).
 - FR-01715: A trade's TraderX state SHALL map to `TradeState.state.positionState`: `New`,
   `Processing`, `Settled` → `Executed`; `Cancelled` → `Cancelled` (Rulings R35, R37). Tests:
@@ -336,7 +348,11 @@ Run by `scripts/test-state-017-cdm-lifecycle-mapping.sh` against a running stack
 - **(a) Direct trade.** Given a running 017 stack, when a trade is booked from the trade ticket, then
   its trade lineage leads with a `VALID` `Executed` trade state under `cdm:trade:<tradeId>`, produced
   by the direct workflow `cdm:direct:<tradeId>` (`proposed → accepted`, both `VALID`, the accepted step
-  carrying the qualified execution event), `executionType` `Electronic` with its meaning.
+  carrying the qualified execution event), `executionType` `OffFacility` with its meaning, the
+  account's subsidiary as `Party1`, the client as `Party2` and no venue.
+- **(h) Facing subsidiaries.** Given account 22214 serviced by one subsidiary, when it is switched to
+  another, then a trade booked afterwards has the new subsidiary as `Party1` and an earlier trade keeps
+  the old one; an unknown subsidiary is rejected with 400.
 - **(b) Order fills completely.** When an order of 1500 is placed with a limit 50% above market, then
   the order's proposal is approved by the venue, the matcher fills 750 and 750, and the lineage shows
   "Partial fill 1" and "Final fill 2", each its own `VALID` `fill-proposed → fill-accepted` workflow

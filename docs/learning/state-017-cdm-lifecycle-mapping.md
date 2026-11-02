@@ -40,6 +40,7 @@ Entry route: **combined**. Bring the knowledge from every declared predecessor.
 
 - A common domain model is a shared, machine-readable definition of trading objects (parties, products, trades) and of the events that change them, so different firms and systems describe the same trade the same way. FINOS CDM is one such model, published with validation rules and Java code.
 - Adopting a model incrementally means choosing, per kind of record, whether the new model is authoritative (the system of record, with existing APIs served as projections of it) or a mirror (built asynchronously from the existing system's events, so it can never block the existing flow).
+- A dealer trades as principal with its clients: the dealer and the client are the two counterparties of each trade, and an exchange or matching engine is the venue where it was executed, not a counterparty. TraderX here is a dealer group whose subsidiaries (NYC, LDN, TKY) each face some of the clients.
 - CDM describes change as a workflow: a proposed step holds an instruction, an accepted step carries the business event that executes it, and each execution produces a trade state. An order resting at a venue is an approved proposal, not yet a trade.
 - A projection is a simpler view of a richer record. A lossless projection can be turned back into the same simple values; the fields that cannot be recovered must be listed rather than hidden.
 
@@ -59,7 +60,7 @@ Objectives: `explain-adoption-boundary`.
 
 Start this state with --reset-data and confirm curl -s http://localhost:8080/cdm-service/health reports cdmVersion 7.8.0. Fetch account 22214 from /account-service/account/22214 and stock IBM from /reference-data/stocks/IBM, note their cdmRef values, and resolve each by appending it to /cdm-service/cdm/resolve/ (for example /cdm-service/cdm/resolve/cdm:party:22214). Compare the simple shape with the CDM Party and Security it came from.
 
-**Expected observation and meaning:** The account and stock keep their 009 fields and add a cdmRef such as cdm:party:22214 or cdm:security:IBM. The resolved objects are a CDM Party with a TraderX account-id identifier and a CDM Security with ticker, demo ISIN and demo FIGI identifiers, both reported valid. The extra CDM content is reachable only through cdmRef, not in the simple shape.
+**Expected observation and meaning:** The account and stock keep their 009 fields and add a cdmRef such as cdm:party:22214 or cdm:security:IBM. The resolved objects are a CDM Party with a TraderX account-id identifier and a CDM Account whose servicingParty is the TraderX subsidiary facing that client, and a CDM Security with ticker, demo ISIN and demo FIGI identifiers, both reported valid. The extra CDM content is reachable only through cdmRef, not in the simple shape.
 
 Supporting material: [quickstart](/specs/cdm-lifecycle-mapping/quickstart) · [cdm-mapping](/specs/cdm-lifecycle-mapping/contracts/cdm-mapping) · [contract-delta](/specs/cdm-lifecycle-mapping/contracts/contract-delta).
 
@@ -69,7 +70,7 @@ Objectives: `trace-order-lineage`.
 
 In the UI at http://localhost:8080, pick account 22214 and place a limit order for 1500 IBM well below the market so the matcher does not fill it. Fill 750 with curl -X POST 'http://localhost:8080/order-matcher/orders/ORDERID/force-fill?quantity=750' (ORDERID is the order's id in the order blotter), then cancel the order from the order blotter. Click CDM on the order and open each node, including the raw CDM JSON of a fill's accepted step. Compare with the order and trade blotters.
 
-**Expected observation and meaning:** The CDM tree shows the order proposal approved by the TraderX Matching Engine, one fill of 750 with its own proposed and accepted steps whose business event produces a TradeState, and a Cancel (remainder 750): a correction of the proposal with status Cancelled. The 009 order shows 750 filled and 750 cancelled, and exactly one booked trade of 750 exists. The fill is linked to the order only by the order id in its identifiers.
+**Expected observation and meaning:** The CDM tree shows the order proposal approved by the TraderX Matching Engine, one fill of 750 with its own proposed and accepted steps whose business event produces a TradeState, and a Cancel (remainder 750): a correction of the proposal with status Cancelled. The 009 order shows 750 filled and 750 cancelled, and exactly one booked trade of 750 exists. The parties card shows the client (Party2), the TraderX subsidiary facing it (Party1, the dealer) and the matching engine as execution facility, not a counterparty. The fill is linked to the order only by the order id in its identifiers.
 
 Supporting material: [cdm-mapping](/specs/cdm-lifecycle-mapping/contracts/cdm-mapping) · [architecture](/specs/cdm-lifecycle-mapping/system/architecture) · [research](/specs/cdm-lifecycle-mapping/research).
 
@@ -112,7 +113,7 @@ Use the [learning-partner protocol](/docs/learning/how-to-learn#learn-with-an-ag
 1. Compare the account-service response with the resolved Party field by field; anything only in the Party is CDM content the projection leaves out.
 2. Ask which service answers when cdm-service is down: projections of authoritative data cannot, while mirrored lifecycles simply catch up later.
 
-**Misconception to probe (not a fact):** Adding CDM means every TraderX service now reads and writes CDM objects, so trading stops if CDM fails.
+**Misconception to probe (not a fact):** Adding CDM means every TraderX service now reads and writes CDM objects, so trading stops if CDM fails; or that the matching engine is the counterparty of every trade.
 
 **Evidence to ask the learner for:** Ask for the account and stock responses with their cdmRef values, the resolved CDM objects, and the learner's explanation of which records are authoritative and which are mirrored.
 

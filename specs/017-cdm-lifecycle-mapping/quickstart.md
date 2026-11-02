@@ -30,8 +30,8 @@ curl -s http://localhost:8080/cdm-service/health   # {"status":"ok","service":"c
 ```
 
 The first start builds the images (cdm-service takes about a minute). cdm-service reports `ok` once it
-has seeded 509 securities, the 009 accounts and people, and the venue party. account-service,
-people-service and reference-data start after that.
+has seeded 509 securities, the 009 accounts and people, the TraderX subsidiaries (NYC, LDN, TKY)
+and the venue party. account-service, people-service and reference-data start after that.
 
 Notes:
 
@@ -115,7 +115,7 @@ curl -s http://localhost:8080/cdm-service/cdm/validation-summary | jq '.latest, 
 | Endpoint (prefix `/cdm-service`) | What |
 |---|---|
 | `GET /cdm/orders/{orderId}/lineage` | The order: `proposal` (`versions`, venue `approval`, `executionType` + meaning), `fills` (each `fillNumber`, `label`, `filledSoFar`, `proposed`/`accepted` steps, `tradeState`), `cancel`, quantities, parties, security, failures |
-| `GET /cdm/trades/{tradeId}` | The trade state first, then `producedBy` (kind `fill` with order id and fill number, or `direct`) and `executionType` (`OnVenue` / `Electronic`) with its meaning |
+| `GET /cdm/trades/{tradeId}` | The trade state first, then `producedBy` (kind `fill` with order id and fill number, or `direct`) and `executionType` (`OnVenue` / `OffFacility`) with its meaning |
 | `GET /cdm/trades/{tradeId}/lineage` | The trade state summary, then the producing fill's or direct workflow's `proposed` and `accepted` steps |
 | `GET /cdm/positions/{accountId}` | CDM `PortfolioState`; each of `positions[]` lists its `trades`, whose signed quantities sum to the position |
 | `GET /cdm/resolve/{cdmRef}` | Any `cdmRef`; `cdm:order:<id>` is the order's own latest version (cancel, else approved/rejected proposal), `cdm:trade:<id>` the `TradeState`, `cdm:direct:<id>` the direct trade's CDM `Workflow` |

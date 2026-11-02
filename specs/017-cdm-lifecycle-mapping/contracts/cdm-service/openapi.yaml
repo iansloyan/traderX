@@ -71,7 +71,10 @@ paths:
   /cdm/parties/{key}:
     get:
       operationId: party
-      summary: CDM Party of an account id (persons resolved), or the venue party traderx-matching-engine
+      summary: >
+        CDM Party of an account id (persons resolved, account.servicingParty = the facing TraderX
+        subsidiary), a TraderX subsidiary (traderx-nyc, traderx-ldn, traderx-tky), or the venue
+        party traderx-matching-engine
       parameters:
         - name: key
           in: path
@@ -82,6 +85,45 @@ paths:
           $ref: '#/components/responses/CdmObject'
         "404":
           description: Unknown party
+  /cdm/entities:
+    get:
+      operationId: entities
+      summary: The TraderX subsidiaries that can face a client, as CDM parties
+      responses:
+        "200":
+          description: CDM Party objects in seed order
+          content:
+            application/json:
+              schema: { type: array, items: { type: object } }
+  /cdm/parties/{accountId}/servicing-party:
+    put:
+      operationId: setServicingParty
+      summary: >
+        Make a TraderX subsidiary service the account (CDM Account.servicingParty). Later orders and
+        trades of the account face it as Party1; earlier ones keep theirs.
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema: { type: integer, example: 22214 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entity]
+              properties:
+                entity: { type: string, enum: [traderx-nyc, traderx-ldn, traderx-tky] }
+      responses:
+        "200":
+          $ref: '#/components/responses/CdmObject'
+        "400":
+          description: Unknown subsidiary
+        "404":
+          description: Unknown account
+        "503":
+          description: Party master not ready
   /cdm/orders/{orderId}/lineage:
     get:
       operationId: orderLineage
@@ -474,10 +516,11 @@ components:
         object: { type: object }
     ExecutionType:
       type: string
-      enum: [OnVenue, Electronic]
+      enum: [OnVenue, OffFacility]
       description: >
-        CDM ExecutionTypeEnum. OnVenue for orders and matcher fills, Electronic for direct trades from
-        the trade ticket; executionTypeMeaning gives the TraderX meaning next to every value.
+        CDM ExecutionTypeEnum. OnVenue for orders and matcher fills, OffFacility for direct trades
+        from the trade ticket (bilateral, no venue); executionTypeMeaning gives the TraderX meaning
+        next to every value.
     Step:
       nullable: true
       allOf:
@@ -515,8 +558,9 @@ components:
             quantity: { type: number }
             price: { type: number }
             side: { type: string, enum: [Buy, Sell] }
-            account: { type: object }
-            venue: { type: object }
+            account: { type: object, description: "The client (Party2): cdmRef, name" }
+            dealer: { type: object, description: "The facing TraderX subsidiary (Party1): cdmRef, name" }
+            venue: { type: object, nullable: true, description: "The execution facility; null on a direct trade" }
             security: { type: object }
     ProducedBy:
       type: object
@@ -569,7 +613,9 @@ components:
             approval: { $ref: '#/components/schemas/Approval' }
         fills: { type: array, items: { $ref: '#/components/schemas/Fill' } }
         cancel: { $ref: '#/components/schemas/Step' }
-        parties: { type: object }
+        parties:
+          type: object
+          description: account (the client, Party2), dealer (the facing subsidiary, Party1), venue (ExecutionFacility)
         security: { type: object }
         failures: { type: array, items: { type: object } }
         pending: { type: object }

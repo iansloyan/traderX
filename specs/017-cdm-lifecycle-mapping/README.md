@@ -23,6 +23,9 @@ docs site as the state 017 learning guide.
 - **Parties, persons and securities are CDM records.** A new `cdm-service` owns them as CDM `Party`,
   `NaturalPerson` and `Security` objects. account-service, people-service and reference-data keep
   their 009 shapes, served as projections.
+- **A dealer trading with its clients.** Each TraderX account is a client. One of three TraderX
+  group subsidiaries (NYC, LDN, TKY) services it and is the dealer, `Party1`, of its orders and
+  trades; the client is `Party2`. The matcher is the execution venue, not a counterparty.
 - **Every order and trade event becomes CDM, before and after the trade.** An order is a CDM
   proposal that the venue approves (`WorkflowStepApproval`), or rejects, and that a cancel corrects
   with status `Cancelled`. Each fill is its own child instruction: a proposed step, then an accepted
@@ -77,9 +80,10 @@ A trade starts from its CDM `TradeState` and shows the fill workflow that produc
 
 | TraderX | FINOS CDM 7.8.0 |
 |---|---|
-| Account `22214` | `Party` with a TraderX account-id identifier → `cdm:party:22214` |
+| Account `22214` (a client) | `Party` with a TraderX account-id identifier and a CDM `Account` (type `Client`) → `cdm:party:22214`; the client, `Party2`, of its orders and trades |
+| TraderX group subsidiaries NYC, LDN, TKY | one `Party` each (`cdm:party:traderx-nyc`, …); the one servicing an account (`Account.servicingParty`) is the dealer, `Party1`, of its orders and trades |
 | Trader `user01` on an account | `NaturalPerson` (`cdm:person:user01`), linked to the account party with role `TRADER` |
-| Order matcher | venue `Party` "TraderX Matching Engine", counterparty, execution facility and approver |
+| Order matcher | venue `Party` "TraderX Matching Engine": `ExecutionFacility` and approver of orders, never a counterparty |
 | Ticker `IBM` | `Security` (`Equity`) with ticker, demo ISIN, demo FIGI and name identifiers → `cdm:security:IBM` |
 | Order created | proposed `WorkflowStep` holding an `ExecutionInstruction` (the parent instruction) |
 | Order accepted by the matcher | the same proposal with the venue's approval (`WorkflowStepApproval`, `approved: true`) |
@@ -87,7 +91,7 @@ A trade starts from its CDM `TradeState` and shows the fill workflow that produc
 | Trade | its `TradeState`, with a link to the step that produced it |
 | Cancel | a correction of the order's proposal with status `Cancelled`; fills untouched |
 | Invalid order | proposed + rejected `WorkflowStep`, with the venue's `approved: false` and the reason |
-| Trade ticket trade | its own proposed → accepted workflow (`cdm:direct:<tradeId>`) |
+| Trade ticket trade | its own proposed → accepted workflow (`cdm:direct:<tradeId>`), `OffFacility`, no venue |
 | Positions | `PortfolioState` derived from the account's trade states, listing them per holding |
 
 Defaults TraderX never had are stated, not guessed: USD, settlement T+2 business days, delivery versus
@@ -111,14 +115,16 @@ payment, cash-equity `SettlementPayout` product.
 - **Cancel corrects the order, not the trades.** Cancelling an execution in CDM means the trade is
   busted. Cancelling the remainder is a correction of the order's proposal with status `Cancelled`.
 - **Execution type has a stated meaning.** Matcher fills are `OnVenue` ("execution via a platform"),
-  trade-ticket trades `Electronic`; the API and the CDM view show what each means here.
+  trade-ticket trades `OffFacility` (bilateral, no venue); the API and the CDM view show what each
+  means here.
 - **`Settled` becomes `Executed`.** TraderX labels trades "Settled" with no settlement event; CDM
   `SETTLED` without a transfer would misstate what happened.
-- **The venue is the counterparty.** TraderX's matcher fills orders against the price feed; there is
-  no contra order and no other client on the far side. So the matcher's venue party is the principal
-  counterparty of every trade, as well as the execution facility. A central counterparty (via
-  novation), a house account, or an agency model with the venue only in the execution details are
-  all reasonable alternatives, left open for discussion with the CDM maintainers.
+- **Dealer and client are the counterparties.** TraderX reads as a dealer's trading system: the
+  TraderX subsidiary servicing the account (NYC, LDN or TKY, CDM `Account.servicingParty`) is
+  `Party1`, the client `Party2`, trading as principals. The matcher is only the `ExecutionFacility`,
+  though it still approves orders against the market. Switching an account's subsidiary (the
+  selector on the CDM tab) changes later trades only. A house account, CCP novation of the street-side
+  trade or an agency model are alternatives left open for the CDM community (gap G18).
 - **Two kinds of key.** The store's SHA-256 key versions and joins stored objects; CDM's own
   `meta.globalKey` is what references inside CDM objects use. The APIs show both, named apart.
 
@@ -131,7 +137,7 @@ Start here:
   JSON, translation rules, semantic gaps, projection losses and the phased adoption path.
 - [`contracts/contract-delta.md`](contracts/contract-delta.md): REST, NATS, schema and UI changes.
 - [`tests/smoke/README.md`](tests/smoke/README.md): what the scenario tests prove.
-- [`research.md`, "Decision log"](research.md#decision-log-r1r68): every "Ruling Rnn" cited in the
+- [`research.md`, "Decision log"](research.md#decision-log-r1r73): every "Ruling Rnn" cited in the
   code and documents, with its reason and consequence.
 
 Core artifacts:

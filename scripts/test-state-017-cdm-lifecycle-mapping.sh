@@ -5,7 +5,8 @@ set -euo pipefail
 #
 # Drives a running 017 stack through its ingress REST APIs only and checks that every TraderX
 # lifecycle event ends up as valid FINOS CDM objects in cdm-service:
-#   (a) direct trade            cdm:direct workflow proposed -> accepted, trade state first, Electronic
+#   (a) direct trade            cdm:direct workflow proposed -> accepted, trade state first, OffFacility,
+#                               the facing subsidiary (Party1) against the client (Party2), no venue
 #   (b) order fills completely  venue approval, two fill workflows (OnVenue), executedQuantity = quantity
 #   (c) order fills partly (force-fill 750), then is cancelled; (c') a full force-fill;
 #       (c'') an order cancelled with no fills
@@ -13,6 +14,8 @@ set -euo pipefail
 #   (e) round trips             account, person, stock, trade, position (trades sum to quantity)
 #   (g) cdm-service outage      order placed, filled twice and cancelled while cdm-service misses it;
 #       the startup backfill rebuilds the same lineage shape and fill numbers (needs docker)
+#   (h) facing subsidiaries     three TraderX subsidiaries; switching an account's servicing party
+#                               changes the dealer (Party1) of its later trades only
 #   (f) validation              nothing INVALID or NOT_QUALIFIED, no BusinessEvent rows, no failure rows
 #
 # Prerequisites: bash, curl, jq, and a running 017 stack
@@ -406,14 +409,22 @@ scenario_a() {
   expect "(a) trade state VALID, Executed, 100 Buy" "${url}" \
     '.tradeState.validation.status == "VALID" and .tradeState.positionState == "Executed"
      and .tradeState.quantity == 100 and .tradeState.side == "Buy"'
-  expect "(a) executionType Electronic with its meaning" "${url}" \
-    '.executionType == "Electronic" and (.executionTypeMeaning | type == "string" and length > 0)'
-  expect "(a) /cdm/trades: TradeState first, producedBy kind direct, Electronic" \
+  expect "(a) executionType OffFacility with its meaning" "${url}" \
+    '.executionType == "OffFacility" and (.executionTypeMeaning | type == "string" and length > 0)'
+  expect "(a) the facing subsidiary is Party1 (dealer), the client Party2, and there is no venue" \
+    "${CDM}/cdm/resolve/cdm:trade:${DIRECT_TRADE_ID}" \
+    '.trade as $t
+     | ([$t.counterparty[] | {(.role): .partyReference.externalReference}] | add)
+       == {"Party1": $dealer, "Party2": ($acct | tostring)}
+     and ([$t.partyRole[] | select(.role == "ExecutionFacility")] | length) == 0
+     and ($t.executionDetails.executionVenue == null)' \
+    --arg dealer "$(facing_entity "${ACCOUNT_ID}")" --argjson acct "${ACCOUNT_ID}"
+  expect "(a) /cdm/trades: TradeState first, producedBy kind direct, OffFacility" \
     "${CDM}/cdm/trades/${DIRECT_TRADE_ID}" \
     '(keys_unsorted[0:2] == ["cdmRef", "tradeState"])
      and .tradeState.cdmType == "cdm.event.common.TradeState" and .tradeState.validation.status == "VALID"
      and .producedBy.kind == "direct" and .producedBy.cdmRef == ("cdm:direct:" + $id)
-     and .executionType == "Electronic"' --arg id "${DIRECT_TRADE_ID}"
+     and .executionType == "OffFacility"' --arg id "${DIRECT_TRADE_ID}"
   expect "(a) trade state resolves by cdmRef" "${CDM}/cdm/resolve/cdm:trade:${DIRECT_TRADE_ID}" \
     '.trade.tradeLot[0].priceQuantity[0].quantity.value.value == 100'
   if [[ "$(header X-CDM-Type)" == "cdm.event.common.TradeState" ]]; then
@@ -466,6 +477,13 @@ scenario_b() {
     "${order_id}" "${FILLS_VALID}"
   expect_order "(b) no failures or pending events" "${order_id}" "${NOTHING_FAILED_OR_PENDING}"
   check_fill_trades "(b)" "${order_id}"
+  expect_order "(b) dealer (Party1) and client (Party2) are the counterparties; the venue is only the ExecutionFacility" \
+    "${order_id}" \
+    '.parties.dealer.cdmRef == ("cdm:party:" + $dealer) and .parties.dealer.role == "Party1"
+     and .parties.account.accountId == $acct and .parties.account.role == "Party2"
+     and .parties.venue.cdmRef == "cdm:party:traderx-matching-engine"
+     and .parties.venue.role == "ExecutionFacility"' \
+    --arg dealer "$(facing_entity "${ACCOUNT_ID}")" --argjson acct "${ACCOUNT_ID}"
   expect "(b) cdm:order resolves to the order's own latest version (approved)" \
     "${CDM}/cdm/resolve/cdm:order:${order_id}" \
     '.approval[0].approved == true and .approval[0].party.externalReference == "traderx-matching-engine" and (has("businessEvent") | not)'
@@ -474,6 +492,11 @@ scenario_b() {
 # --- (c) order fills partly, then is cancelled -------------------------------------------------
 
 PARTIAL_CANCEL_ORDER_ID=""
+
+# The key of the TraderX subsidiary servicing an account (its CDM account.servicingParty).
+facing_entity() {
+  curl -sS "${CDM}/cdm/parties/$1" | jq -r '.account.servicingParty.externalReference // empty'
+}
 scenario_c() {
   # Limit 50% below market: never auto-fills, so the only fill is the admin force-fill of 750
   # (the 017 matcher's optional force-fill quantity, Ruling R36). The cancel then cancels the
@@ -724,7 +747,7 @@ scenario_e() {
        | ($account | tostring) as $acct
        | {id: [$t.tradeIdentifier[].assignedIdentifier[].identifier
                | select(.meta.scheme == "https://traderx.finos.org/trade-id") | .value][0],
-          accountId: ($t.counterparty[] | select(.role == "Party1") | .partyReference.externalReference | tonumber),
+          accountId: ($t.counterparty[] | select(.role == "Party2") | .partyReference.externalReference | tonumber),
           security: [$t | .. | objects | select(.identifierType? == "ExchangeCode") | .identifier.value][0],
           side: (if any($t.partyRole[]; .role == "Buyer" and .partyReference.externalReference == $acct)
                  then "Buy" else "Sell" end),
@@ -744,7 +767,7 @@ scenario_e() {
   fi
 
   # Position: compared accountId, security, quantity (CDM quantity signed by payerReceiver:
-  # receiver Party1 = long), averageCostBasis and cdmRef. accountId is not inside the CDM
+  # receiver Party2, the client, = long), averageCostBasis and cdmRef. accountId is not inside the CDM
   # Position object (it is the account of its PortfolioState); the derivation injects the test
   # account id ($account), and the cdmRef (cdm:position:<account>:<ticker>) ties it to the
   # account. Not compared: `updated` (position-service row-write time; the CDM side has the
@@ -757,7 +780,7 @@ scenario_e() {
       '([.. | objects | select(has("payerReceiver")) | .payerReceiver][0]) as $pr
        | {accountId: $account,
           security: [.. | objects | select(.identifierType? == "ExchangeCode") | .identifier.value][0],
-          quantity: (.priceQuantity[0].quantity.value.value * (if $pr.receiver == "Party1" then 1 else -1 end)),
+          quantity: (.priceQuantity[0].quantity.value.value * (if $pr.receiver == "Party2" then 1 else -1 end)),
           averageCostBasis: .priceQuantity[0].price[0].value.value,
           cdmRef: $ref}' \
       "${CDM}/projections/positions/${ACCOUNT_ID}" \
@@ -1002,6 +1025,65 @@ scenario_f() {
   fi
 }
 
+# --- (h) facing subsidiaries -------------------------------------------------------------------
+
+scenario_h() {
+  echo "[check] (h) TraderX subsidiaries face clients; switching changes later trades only"
+  expect "(h) three subsidiaries: NYC, LDN, TKY" "${CDM}/cdm/entities" \
+    '[.[].meta.externalKey] == ["traderx-nyc", "traderx-ldn", "traderx-tky"]'
+  expect "(h) account ${ACCOUNT_ID} is a CDM Client account serviced by a subsidiary" \
+    "${CDM}/cdm/parties/${ACCOUNT_ID}" \
+    '.account.accountNumber.value == ($a | tostring) and .account.accountType.value == "Client"
+     and (.account.servicingParty.externalReference | startswith("traderx-"))' --argjson a "${ACCOUNT_ID}" || return
+  local original target
+  original="$(facing_entity "${ACCOUNT_ID}")"
+  target="traderx-tky"
+  [[ "${original}" == "${target}" ]] && target="traderx-ldn"
+  fetch PUT "${CDM}/cdm/parties/${ACCOUNT_ID}/servicing-party" "$(jq -n -c --arg e "${target}" '{entity: $e}')"
+  if [[ "${STATUS}" == "200" ]] && jq_true "${BODY}" '.account.servicingParty.externalReference == $e' --arg e "${target}"; then
+    pass "(h) servicing party switched ${original} -> ${target}"
+  else
+    fail "(h) servicing party switch" "HTTP ${STATUS}: $(head -c 300 <<<"${BODY}")"
+    return
+  fi
+  fetch PUT "${CDM}/cdm/parties/${ACCOUNT_ID}/servicing-party" '{"entity":"traderx-par"}'
+  if [[ "${STATUS}" == "400" ]]; then
+    pass "(h) an unknown subsidiary is rejected with 400"
+  else
+    fail "(h) an unknown subsidiary is rejected with 400" "HTTP ${STATUS}"
+  fi
+  fetch GET "${INGRESS_URL}/position-service/trades/${ACCOUNT_ID}"
+  local before
+  before="$(jq_out "${BODY}" '[.[].id]')"
+  fetch POST "${INGRESS_URL}/trade-service/trade/" \
+    "$(jq -n -c --argjson a "${ACCOUNT_ID}" --arg s "${TICKER}" \
+      '{accountId: $a, security: $s, side: "Sell", quantity: 7}')"
+  local new_trades='[.[] | select((.id as $id | $before | any(. == $id) | not)
+      and .security == $s and .side == "Sell" and .quantity == 7)]'
+  if expect "(h) a trade after the switch is booked" "${INGRESS_URL}/position-service/trades/${ACCOUNT_ID}" \
+    "${new_trades} | length > 0" --argjson before "${before}" --arg s "${TICKER}"; then
+    local trade_id
+    trade_id="$(jq_out "${BODY}" "${new_trades}[0].id" -r --argjson before "${before}" --arg s "${TICKER}")"
+    expect "(h) the new trade faces ${target} as Party1 and Buyer" "${CDM}/cdm/resolve/cdm:trade:${trade_id}" \
+      '.trade as $t
+       | ([$t.counterparty[] | select(.role == "Party1") | .partyReference.externalReference][0] == $e)
+       and any($t.partyRole[]; .role == "Buyer" and .partyReference.externalReference == $e)
+       and .state.positionState == "Executed"' --arg e "${target}"
+  fi
+  if [[ -n "${DIRECT_TRADE_ID:-}" ]]; then
+    expect "(h) the earlier trade ${DIRECT_TRADE_ID} still faces ${original}" \
+      "${CDM}/cdm/resolve/cdm:trade:${DIRECT_TRADE_ID}" \
+      '[.trade.counterparty[] | select(.role == "Party1") | .partyReference.externalReference][0] == $e' \
+      --arg e "${original}"
+  fi
+  fetch PUT "${CDM}/cdm/parties/${ACCOUNT_ID}/servicing-party" "$(jq -n -c --arg e "${original}" '{entity: $e}')"
+  if [[ "${STATUS}" == "200" ]]; then
+    pass "(h) servicing party restored to ${original}"
+  else
+    fail "(h) servicing party restored to ${original}" "HTTP ${STATUS}"
+  fi
+}
+
 # Example ids from this run, for looking at them in the CDM tab (/cdm/order/<id>, /cdm/trade/<id>).
 print_examples() {
   echo "[info] examples: direct trade=${DIRECT_TRADE_ID:-?} filled order=${FILLED_ORDER_ID:-?}" \
@@ -1019,6 +1101,7 @@ scenario_c_zero_fill_cancel || true
 scenario_d || true
 scenario_e || true
 scenario_g || true
+scenario_h || true
 scenario_f || true
 print_examples
 

@@ -74,13 +74,16 @@ flowchart LR
   T2 -.->|"producedBy (stored field)"| FA2
 
   subgraph masters["Masters (CDM authoritative)"]
-    PA["Party cdm:party:22214"]
+    PA["Party cdm:party:22214 (client)<br/>account.servicingParty = traderx-nyc"]
+    DE["Party cdm:party:traderx-nyc<br/>(TraderX subsidiary)"]
     VE["Party cdm:party:traderx-matching-engine"]
     NP["NaturalPerson cdm:person:user01"]
     SE["Security cdm:security:IBM"]
   end
-  P -. "Party1 / Buyer or Seller" .-> PA
-  P -. "Party2 / ExecutionFacility, approver" .-> VE
+  P -. "Party2 / Client, Buyer or Seller" .-> PA
+  P -. "Party1 / ExecutingEntity, BookingParty" .-> DE
+  P -. "ExecutionFacility, approver (not a counterparty)" .-> VE
+  PA -. "servicingParty" .-> DE
   P -. underlier .-> SE
   PA -. "personRole TRADER" .-> NP
 
@@ -175,7 +178,7 @@ differ.
 | Order rejected (invalid create, HTTP 400) | order-matcher `/orders/rejected` | proposal of the request as received, then `Create_RejectedWorkflowStep` (`rejected: true`, `workflowStatus Rejected`, reason in `workflowState.comment`) with `approval` `approved: false` and the `rejectedReason` | `cdm:order:<rejectionId>` | [`order-rejected.json`](./examples/order-rejected.json) |
 | Fill (`PARTIALLY_FILLED` or `FILLED`, booked trade with `orderId`) | trade-processor `/trades/booked` | its own workflow: **fill proposed** (`Create_ProposedWorkflowStep`, action `New`, no previous step, identifiers = order id + trade id, child `ExecutionInstruction` for the fill quantity at the fill price) and **fill accepted** (`Create_AcceptedWorkflowStep` carrying `Create_BusinessEvent`, `after` = `TradeState` with `positionState Executed`) | both steps under `cdm:order:<orderId>`; the `TradeState` alone under `cdm:trade:<tradeId>` with `producedBy` | [`fill-proposed.json`](./examples/fill-proposed.json), [`fill-accepted.json`](./examples/fill-accepted.json) |
 | Cancel (`CANCELED` on `/orders`) | order-matcher | `Create_ProposedWorkflowStep`: action `Correct`, `previousWorkflowStep` = the latest proposal version, the same instruction (quantity not reduced), identifier version 2, `workflowState` `Cancelled` with a comment giving the cancelled and executed quantities | `cdm:order:<orderId>` | [`order-cancel-remainder.json`](./examples/order-cancel-remainder.json) |
-| Direct trade (booked trade with no `orderId`) | trade-processor `/trades/booked` | proposed (the trade as an instruction, `executionType Electronic`) → accepted (execution `BusinessEvent`, `after` = `TradeState`) | steps under `cdm:direct:<tradeId>`; `TradeState` under `cdm:trade:<tradeId>` | [`direct-trade.json`](./examples/direct-trade.json) |
+| Direct trade (booked trade with no `orderId`) | trade-processor `/trades/booked` | proposed (the trade as an instruction, `executionType OffFacility`, no venue) → accepted (execution `BusinessEvent`, `after` = `TradeState`) | steps under `cdm:direct:<tradeId>`; `TradeState` under `cdm:trade:<tradeId>` | [`direct-trade.json`](./examples/direct-trade.json) |
 
 The `PARTIALLY_FILLED` and `FILLED` order events themselves store nothing
 (`LifecycleAdapterTest.partiallyFilledAndFilledStoreNothing`). The booked trade is the execution, so
@@ -399,7 +402,8 @@ No rejected workflow exists for such an order.
 A trade booked from the trade ticket (no `orderId`) is CDM's canonical two-step flow under
 `cdm:direct:<tradeId>` (`ExecutionMapper.direct`,
 `ExecutionMapperTest.directTradeIsProposedThenAcceptedWithItsExecution`): a proposal (the trade at its
-booked price, identified by the trade id with scheme `trade-id`, `executionType Electronic`), then the
+booked price, identified by the trade id with scheme `trade-id`, `executionType OffFacility`: a
+bilateral booking between the facing TraderX subsidiary and the client, with no venue), then the
 accepted step with the execution `BusinessEvent`. Its `TradeState` is stored under
 `cdm:trade:<tradeId>` with `producedBy` = the direct workflow's accepted step. `cdm:direct` is a
 cdm-service lookup address, not a CDM concept (Ruling R53). Trade-service's 009 seed trades are
@@ -410,7 +414,7 @@ sell):
 
 ```json
 {
-  "businessEvent" : { "...": "execution of 200 shares; after = TradeState with executionType Electronic" },
+  "businessEvent" : { "...": "execution of 200 shares; after = TradeState with executionType OffFacility" },
   "previousWorkflowStep" : { "globalReference" : "8a15add1", "externalReference" : "trd-017-0100:proposed" },
   "timestamp" : [ { "dateTime" : "2026-10-29T15:00:00Z", "qualification" : "executionDateTime" } ],
   "eventIdentifier" : [ { "issuer" : { "value" : "TraderX" },
@@ -429,7 +433,9 @@ sell):
 | Account `{id, displayName}` | `cdm.base.staticdata.party.Party` | `partyId[0].identifier` = account id, scheme `https://traderx.finos.org/account-id`; `name` = display name; `meta.externalKey` = account id | `cdm:party:<accountId>` |
 | Account user `{accountId, username}` | `Party.person` (identifier-only `NaturalPerson`) + `Party.personRole` (`NaturalPersonRole`, role `TRADER`, `personReference.externalReference` = logon id) | persons and roles sorted by logon id | inside the account Party |
 | Person `{logonId, fullName, email, employeeId, department, photoUrl}` | `NaturalPerson` | `personId`: logon id (scheme `https://traderx.finos.org/logon-id`), employee id (`identifierType EMPL`), department (scheme `https://traderx.finos.org/department`), photo URL (scheme `https://traderx.finos.org/photo-url`); `firstName`/`surname` = `fullName` split at the first space; `contactInformation.email` | `cdm:person:<logonId>` |
-| Order matcher (execution venue) | `Party` | `partyId` `traderx-matching-engine`, scheme `https://traderx.finos.org/venue-id`; name "TraderX Matching Engine". It is also the party of every `WorkflowStepApproval`. | `cdm:party:traderx-matching-engine` |
+| TraderX subsidiary (NYC, LDN, TKY; `seed/entities.json`) | `Party` | `partyId` `traderx-nyc`, `traderx-ldn`, `traderx-tky`, scheme `https://traderx.finos.org/entity-id`; name "TraderX NYC", …; no LEI. Each is a legal entity in the TraderX group and the dealer (`Party1`) of the orders and trades of the accounts it services. | `cdm:party:<key>` |
+| Account's facing subsidiary | `Party.account` (`Account`) | `accountNumber` = account id (scheme `account-id`), `accountName` = display name, `accountType` `Client`, **`servicingParty`** = the subsidiary by external key. Seeded from `seed/entities.json` (22214, 52355, 44044 → NYC; 11413, 62654 → LDN; 42422, 10031 → TKY; anything else → NYC); changed with `PUT /cdm/parties/{accountId}/servicing-party`. | inside the account Party |
+| Order matcher (execution venue) | `Party` | `partyId` `traderx-matching-engine`, scheme `https://traderx.finos.org/venue-id`; name "TraderX Matching Engine". The `ExecutionFacility` of orders and fills (never a counterparty) and the party of every `WorkflowStepApproval`: it approves orders against the market. | `cdm:party:traderx-matching-engine` |
 
 Rules:
 
@@ -486,11 +492,11 @@ TraderX has no product, currency or settlement terms. These defaults are stated,
 | Currency | **USD**, single currency | `settlementCurrency USD`; price `unit.currency USD` |
 | Settlement | **T+2 business days**, **delivery versus payment** | `settlementType Physical`, `transferSettlementType DeliveryVersusPayment`, `settlementDate.adjustableOrRelativeDate.relativeDate` = `periodMultiplier 2`, `period D`, `dayType Business`, relative to `tradeDate`. No business-centre calendar, so no adjusted date is computed. |
 | Settlement centres | required by CDM, no TraderX meaning | `securitySettlementCentre SecuritySettlementCentre`, `cashSettlementCentre CashSettlementCentre` (the `SettlementCentreRequired` condition demands both for a security underlier) |
-| Payer / receiver | seller delivers the shares | account = `Party1`, venue = `Party2`; buy → payer `Party2`, receiver `Party1`; sell → the reverse |
+| Payer / receiver | seller delivers the shares | dealer = `Party1`, client (account) = `Party2`; client buys → payer `Party1`, receiver `Party2`; client sells → the reverse |
 | Quantity | shares, integer | `quantity` with `unit.financialUnit Share` |
 | Price | per share, 3 decimals, half-up | `PriceTypeEnum.AssetPrice`, `perUnitOf Share`, `priceExpression AbsoluteTerms`; on fills `derivedQuantity` = gross consideration in USD (checked by CDM's `PriceQuantityTriangulation`) |
-| Roles | account side, venue opposite | `partyRoles`: `Buyer`/`Seller` from the account's side, venue takes the other plus `ExecutionFacility` |
-| Execution details | the matcher as venue | `executionType OnVenue` for orders and fills, `Electronic` for direct trades (section 6); `executionVenue` = `LegalEntity` "TraderX Matching Engine" on both |
+| Roles | client side, dealer opposite | `partyRoles`: `Buyer`/`Seller` from the client's side, the dealer the other; client `Client`; dealer `ExecutingEntity` and `BookingParty`; on orders and fills the matcher `ExecutionFacility` |
+| Execution details | the matcher as venue for orders and fills | `executionType OnVenue` for orders and fills, `OffFacility` for direct trades (section 6); `executionVenue` = `LegalEntity` "TraderX Matching Engine" on orders and fills only |
 | Identifiers | issuer `TraderX` | schemes `https://traderx.finos.org/order-id`, `.../trade-id`, `.../fill-id` (fill steps only, Ruling R42), `.../rejection-id` |
 | Times | UTC, millisecond precision | step `timestamp` (`eventCreationDateTime`, or `executionDateTime` on accepted fill and direct steps); `tradeDate`/`eventDate` = UTC date of the TraderX instant |
 
@@ -498,38 +504,38 @@ TraderX has no product, currency or settlement terms. These defaults are stated,
 
 - **Trade lot price = the price trade-service booked** (`ExecutionMapperTest.tradeLotPriceIsBookedPrice`).
   The `TradeState` must match the booked trade.
-- **Counterparties:** account `Party1`, venue `Party2`. The account users are not copied onto trades:
-  they are entitlements, and copying them would change every trade when a user is added.
-- **Why the venue is the counterparty.** TraderX's order matcher does not cross two client orders. It
-  fills an order against the price feed when the limit is marketable (or on an admin force-fill), and
-  there is no contra order and no other client on the far side of the fill. The only party that takes
-  the other side of every TraderX trade is therefore the matcher itself, so 017 models the venue as the
-  principal counterparty (`Party2`, with the opposite `Buyer`/`Seller` role) as well as the
-  `ExecutionFacility`. This is a modelling choice, not something CDM dictates, and other models fit
-  other readings of TraderX. They are left as future work for the CDM maintainers' input:
-  - **CCP novation:** the venue (or a separate clearing party) is replaced as counterparty by a
-    central counterparty through a CDM novation business event (qualified by `Qualify_Novation` in
-    7.8.0), which is how exchange-traded equities usually end up.
-  - **A contra or house account:** a TraderX-owned principal account takes the far side, and the venue
-    appears only as `ExecutionFacility`. Positions of that house account would then be visible in CDM.
-  - **An agency model:** the venue acts as agent and appears only in `ExecutionDetails`
-    (`executionVenue`), with the counterparty being the (unknown, external) market. This needs a
-    placeholder counterparty party, because a CDM `Trade` requires exactly two counterparties
-    (`counterparty` cardinality 2..2 in `TradeValidator`).
+- **Counterparties: the dealer and the client (Ruling R69).** `Party1` is the TraderX subsidiary that
+  faces the client (the account's `servicingParty` when the event is mapped), `Party2` the client (the
+  TraderX account). TraderX is read as a dealer's trading system: its users are traders of the TraderX
+  group booking business for clients, and the dealer trades as principal with each client. The
+  account users are not copied onto trades: they are entitlements, and copying them would change every
+  trade when a user is added. Each order, fill and trade keeps the subsidiary it was mapped with, so
+  switching an account's subsidiary changes later events only.
+- **The venue is not a counterparty.** The matcher is a third party on orders and fills, in the role
+  `ExecutionFacility` and as `executionVenue`; it still approves each order against the market
+  (`WorkflowStepApproval`, gap G14). Direct trades have no venue.
+- **Readings considered.** An earlier build made the matcher the principal counterparty, because it
+  fills against the price feed and nothing else takes the other side. That reads TraderX as an
+  exchange rather than a dealer and is replaced (amendment
+  [`design/dealer-client-party-model-amendment.md`](../design/dealer-client-party-model-amendment.md)).
+  Other readings remain possible and are open for the CDM community: a **house account** (the firm's
+  own book, CDM `AccountTypeEnum.House`; the seeded "Internal Trading Book" 10031 is treated as a
+  client in 017), **CCP novation** of the dealer's street-side trade, and an **agency model** with the
+  dealer as `ExecutingBroker` (which would need a market counterparty, since a CDM `Trade` has exactly
+  two counterparties).
 - **Execution type.** `ExecutionDetails.executionType` is CDM's `ExecutionTypeEnum`, "The enumerated
   values to specify how a contract has been executed, e.g. electronically, verbally, ...". 017 uses two
-  of its values (`ExecutionMapperTest.fillIsOnVenueDirectIsElectronic`):
+  of its values (`ExecutionMapperTest.fillIsOnVenueDirectIsOffFacilityWithoutVenue`):
 
   | Value | Used on | CDM 7.8.0's definition (`event-common-enum.rosetta`) | Meaning shown by TraderX (`executionTypeMeaning`) |
   |---|---|---|---|
-  | `OnVenue` | every matcher fill; the order proposal and a rejected request's proposal (Ruling R44) | "Execution via a platform that may or may not be covered by a regulatory defintion. OnVenue is intended to distinguish trades executed on a trading platform from those executed via phone, email or messaging apps. The role and details of the venue are included in the party attribute of the trade. The general rule is that if the parties utilitzed the services of the platform to execute the trade then it would be considered OnVenue." | fill: "Executed by the TraderX matching engine (the venue, Party2)"; order proposal: "Sent to the TraderX matching engine (the venue, Party2)" |
-  | `Electronic` | direct trades (trade ticket, no matcher) | "Execution via electronic execution facility, derivatives contract market, or other electronic message such as an instant message." | "Booked electronically from the trade ticket, not matched" |
+  | `OnVenue` | every matcher fill; the order proposal and a rejected request's proposal (Ruling R44) | "Execution via a platform that may or may not be covered by a regulatory defintion. OnVenue is intended to distinguish trades executed on a trading platform from those executed via phone, email or messaging apps. The role and details of the venue are included in the party attribute of the trade. The general rule is that if the parties utilitzed the services of the platform to execute the trade then it would be considered OnVenue." | fill: "Executed on the TraderX matching engine (the venue, execution facility)"; order proposal: "Sent to the TraderX matching engine (the venue, execution facility)" |
+  | `OffFacility` | direct trades (trade ticket, no matcher; Ruling R70) | "Bilateral execution between counterparties not pursuant to the rules of a SEF or DCM." | "Booked bilaterally between the TraderX subsidiary and the client from the trade ticket, with no venue" |
 
   The CDM definitions are quoted verbatim, spelling included. The venue's role and details are in the
-  trade's parties, as `OnVenue` asks (the matcher is `Party2` and `ExecutionFacility`). CDM's
-  `ExecutionVenue` condition requires `executionVenue` only for `Electronic`; 017 sets it on both.
-  `OffFacility` ("Bilateral execution between counterparties not pursuant to the rules of a SEF or
-  DCM") is not used. The meaning is shown wherever the value is: in the lineage and trade APIs
+  trade's parties, as `OnVenue` asks (the matcher is the `ExecutionFacility`). CDM's `ExecutionVenue`
+  condition requires `executionVenue` only for `Electronic`, which 017 no longer uses; it is set on
+  orders and fills and absent on direct trades. The meaning is shown wherever the value is: in the lineage and trade APIs
   (`executionTypeMeaning` next to `executionType`) and in the CDM view (caption and tooltip).
 - **`TradeState.state.positionState` is always `EXECUTED` for a live trade (Ruling R37).** TraderX's
   trade-processor sets `New → Processing → Settled` in one transaction, with no transfer and no
@@ -544,7 +550,8 @@ TraderX has no product, currency or settlement terms. These defaults are stated,
 ## 7. Positions
 
 Positions are a CDM `cdm.event.position.PortfolioState`, derived on every read from the latest
-`TradeState` of every `cdm:trade:` ref whose `Party1` is the account. Nothing is stored.
+`TradeState` of every `cdm:trade:` ref whose client counterparty (`Party2`) is the account. Nothing is
+stored.
 
 - One `Position` per security. Quantity = Σ trade lot quantity, plus when the account is `Buyer`, minus
   when it is `Seller`. `averageCostBasis` repeats 009 trade-processor's arithmetic, trade by trade
@@ -705,6 +712,7 @@ whether the representation 017 chose is the intended one, or a model change.
 | G3 | **The matcher's observed price (`lastExecutionPrice`) is omitted.** Every CDM 7.8.0 home misreads it: `valuationHistory` reads as a mark for PnL, a second `AssetPrice` is ambiguous with the trade price, and `valuation`/`observation` primitives break `Qualify_Execution`. | Trade lot price = booked price. The observed price stays in the matcher's `OrderResponse`. |
 | G4 | **An empty `PortfolioState` cannot be valid in CDM 7.8.0** (Ruling R30). `Initialisation` requires `positions` absent; `NonTransferable` (`positions -> product as NonTransferableProduct exists`) is false when they are absent. | Accounts without CDM trades answer 404 pending instead of serving an object that cannot validate. The initial state is referenced by external key only. |
 | G5 | **`WorkflowStep` required choice.** The choice rule `CounterpartyPositionBusinessEventOrBusinessEventOrProposedEventChoice` fails on the bare output of `Create_RejectedWorkflowStep`. | The rejected step repeats the proposal's `proposedEvent`, the content that fits, and validates. `Create_RejectedWorkflowStep` has no reason input yet, so the reason goes in `workflowState.comment` and in the venue's `approval.rejectedReason`. (The first build's `Cancel` step had the same problem; the cancel is now a proposal, gap G15.) |
+| G18 | **Which party faces the client, and in which roles.** A dealer group books client business through several legal entities. | Each TraderX subsidiary (NYC, LDN, TKY) is its own `Party`; the one facing a client is the client party's `Account.servicingParty` ("the legal entity that services the account"), and it is `Party1` of the client's orders and trades, with roles `ExecutingEntity` and `BookingParty`; the client is `Party2` with role `Client` (Ruling R69). Open: whether `servicingParty` is the intended home for the facing entity, whether those are the right dealer roles, and how a house account (`AccountTypeEnum.House`) trading on the venue should be modelled. |
 
 Where trade-state lineage leads next, not built here: the **OTC lifecycle**, where one trade (one UTI)
 has a chain of `TradeState`s linked by `before`, and **block allocation**, the securities case where a

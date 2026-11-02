@@ -29,7 +29,7 @@ Each task was reviewed before the next started; rulings that changed the plan ar
 - [x] T01712 Runtime wiring: compose service, ingress route, Prometheus scrape and probe, start/status/
   stop scripts with `--reset-data` and stale-volume detection; matcher seeds `NEW` orders and
   cdm-service backfills open orders (FR-01724, FR-01725, NFR-01704, NFR-01709).
-- [x] T01713 Scenario tests (a)–(g) in `scripts/test-state-017-cdm-lifecycle-mapping.sh`; partial
+- [x] T01713 Scenario tests (a)–(h) in `scripts/test-state-017-cdm-lifecycle-mapping.sh`; partial
   force-fill; trade state mapped into CDM; trade lineage and diagnostics endpoints (FR-01717, FR-01719).
 - [x] T01714 CDM view in the TraderX UI (`/cdm`, order and trade lineage, blotter links) (FR-01722).
 - [x] T01714b `EXECUTED` position state for all live trades; backfill of order fills missed while
@@ -37,6 +37,10 @@ Each task was reviewed before the next started; rulings that changed the plan ar
 - [x] T01715 Mapping specification, contract delta, state docs, OpenAPI copies for the API explorer; quality gates; clean-clone reproducibility check.
 - [x] T01718 Learning contract (`learning-contract.json`) for the incremental learning journey,
   replacing the state-owned learning guide; phased CDM adoption path and further CDM states (mapping section 13).
+- [x] T01720 Dealer/client party model amendment: TraderX subsidiaries NYC, LDN, TKY as facing parties
+  (`Account.servicingParty`), dealer `Party1`, client `Party2`, venue as execution facility only, direct
+  trades `OffFacility`; servicing-party endpoint, CDM tab selector, scenario (h) (FR-01727, Rulings
+  R69–R73).
 - [ ] T01716 (On merge) Publish the generated snapshot branch and GHCR images. Proposing `cdmRef` on
   the baseline contracts is left to a further state.
 - [ ] T01719 (Further states on 017) More comprehensive use of CDM: other products, other lifecycles,

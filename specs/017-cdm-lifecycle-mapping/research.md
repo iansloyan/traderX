@@ -305,9 +305,11 @@ longer used.
 `Create_NonTransferableProduct(underlier, payerReceiver)`:
 
 - `underlier` = `Observable -> Asset -> Instrument -> Security` (the master's Security).
-- `payerReceiver`: the account is `Party1`, the venue `Party2`. The payer of a settlement payout
-  delivers the underlier (CDM's FX mapping does the same with the exchanged currency), so the
-  seller is the payer: a buy is payer `Party2`, receiver `Party1`; a sell the reverse.
+- `payerReceiver`: the dealer (the facing TraderX subsidiary) is `Party1`, the client (the account)
+  `Party2` (Ruling R69; the first builds had the account `Party1` and the venue `Party2`). The payer
+  of a settlement payout delivers the underlier (CDM's FX mapping does the same with the exchanged
+  currency), so the seller is the payer: a client buy is payer `Party1`, receiver `Party2`; a sell
+  the reverse.
 - `settlementTerms`: `settlementType = Physical` (shares are delivered),
   `transferSettlementType = DeliveryVersusPayment`, `settlementCurrency = USD`, and
   `settlementDate.adjustableOrRelativeDate.relativeDate` = 2 business days
@@ -331,21 +333,24 @@ longer used.
   are built explicitly. The `addPriceValue`/`setQuantityValue` convenience setters of these
   `[metadata location]` attributes leave an empty location key, which fails CDM `KEY` validation.
 
-**Parties on instructions and trades.**
+**Parties on instructions and trades.** (As of Ruling R69; the first builds had the account `Party1`
+and the venue `Party2`, the venue taking the other side of every trade.)
 
-- `counterparty`: `Party1` = account, `Party2` = venue.
-- `parties`: the account party and the venue party, each with identifiers, name and external key
-  only. The account users (`person`/`personRole`) are not copied: they are entitlements kept by
-  the party master, and copying them would change every trade when a user is added.
-- `partyRoles`: `Buyer`/`Seller` from the account's side (the venue takes the other one, as the
-  counterparty), and the venue as `ExecutionFacility`.
-- References are `externalReference` = the party's external key (`22214`,
+- `counterparty`: `Party1` = the TraderX subsidiary servicing the account (its
+  `account.servicingParty` when the event is mapped), `Party2` = the client (the account).
+- `parties`: the subsidiary, the client and, on orders and fills, the venue, each with identifiers,
+  name and external key only. The account users (`person`/`personRole`) are not copied: they are
+  entitlements kept by the party master, and copying them would change every trade when a user is
+  added.
+- `partyRoles`: `Buyer`/`Seller` from the client's side (the subsidiary takes the other one), the
+  client `Client`, the subsidiary `ExecutingEntity` and `BookingParty`, and on orders and fills the
+  venue `ExecutionFacility`.
+- References are `externalReference` = the party's external key (`22214`, `traderx-nyc`,
   `traderx-matching-engine`).
-- `executionDetails`: `executionType = OnVenue` for orders and fills, `Electronic` for direct trades
-  (see "Execution type" below). `executionVenue` is set on both (CDM's condition `ExecutionVenue`
-  requires it for `Electronic`): a `LegalEntity` named "TraderX Matching Engine" with entity identifier
-  `traderx-matching-engine` (scheme `https://traderx.finos.org/venue-id`,
-  `identifierType Other`).
+- `executionDetails`: `executionType = OnVenue` for orders and fills, `OffFacility` for direct trades
+  (Ruling R70). `executionVenue` is set on orders and fills only: a `LegalEntity` named "TraderX
+  Matching Engine" with entity identifier `traderx-matching-engine` (scheme
+  `https://traderx.finos.org/venue-id`, `identifierType Other`).
 
 **Identifiers and times.**
 
@@ -563,8 +568,8 @@ response that exposes a key carries both kinds:
 
 ### PortfolioState positions
 
-Positions are derived on read from the latest `TradeState` of every `cdm:trade:` ref whose
-`Party1` is the account:
+Positions are derived on read from the latest `TradeState` of every `cdm:trade:` ref whose client
+counterparty (`Party2` since Ruling R69) is the account:
 - **Sign.** A trade counts plus when the account is the `Buyer` and minus when it is the `Seller`.
   A trade state with neither role for the account, or one that cannot be counted, is listed in
   `skipped`. It is never treated as a sale.
@@ -648,7 +653,7 @@ and records its failures like live events.
     ownership table in `generation/generation-hook.md` states which generated paths come from the patch
     and which from `runtime-overrides/`.
 
-## Decision log (R1–R68)
+## Decision log (R1–R73)
 
 Code comments, tests and documents in this state cite "Ruling Rnn". Each ruling is listed here: the
 decision, why it was taken, and its consequence. A few rulings were about the build process rather than
@@ -840,3 +845,28 @@ decision — why — the cost if it turns out wrong.
 - **R66. Build process: interim reader edits accepted.** The storage task changed the lineage readers just enough to keep their tests passing on the new layout; the API task then rewrote them — *why:* every commit keeps the full test suite green — *cost if wrong:* none after the API task.
 - **R67. Build process: the UI task's live visual check moved to after the live scenario run.** — *why:* the running stack still served the old UI image until the scenario task rebuilt it, so an earlier check would have looked at the wrong build — *cost if wrong:* none.
 - **R68. Build process: visual checks of the admin and CDM pages are done by the controller with a browser** after the live scenario run — *why:* the implementing agents had no browser — *cost if wrong:* none.
+- **R69. Dealer and client are the counterparties; subsidiaries face clients.** `Party1` is the TraderX
+  group subsidiary servicing the account (NYC, LDN or TKY; CDM `Account.servicingParty` on the client
+  party, seeded from `seed/entities.json`), `Party2` the client; the matcher is only the
+  `ExecutionFacility` and still approves orders. Amendment
+  [`design/dealer-client-party-model-amendment.md`](design/dealer-client-party-model-amendment.md),
+  decided by the owner — *why:* TraderX reads as a dealer's trading system booking for clients, not an
+  exchange; the venue as principal counterparty was the first thing a CDM reviewer would question —
+  *cost if wrong:* the party builder and five read-back sites change again, and stored data needs
+  `--reset-data`.
+- **R70. Direct trades are `OffFacility` with no venue.** — *why:* a trade-ticket trade is a bilateral
+  booking between the subsidiary and the client; `Electronic` requires an `executionVenue` (CDM
+  condition `ExecutionVenue`) and implied a venue that was not used — *cost if wrong:* one enum value
+  and the absent venue on direct trades.
+- **R71. Every seeded account is a `Client` account.** "Internal Trading Book" (10031) reads as a house
+  book (`AccountTypeEnum.House`), but is treated as a client in 017 — *why:* a house book facing its
+  own subsidiary would make the dealer trade with itself; modelling house books (fills facing the
+  venue or the market) is left to a further state — *cost if wrong:* 10031's trades misdescribe a
+  proprietary book as client business.
+- **R72. The facing subsidiary is chosen per account, not per order.** — *why:* choosing it per order
+  needs changes to 009's order and trade APIs and screens — *cost if wrong:* an account cannot split
+  its business across subsidiaries until a further state adds per-order choice.
+- **R73. Stored account parties without a servicing subsidiary get their seed assignment at startup.**
+  The party master writes a new version with `account.servicingParty` — *why:* a volume from an
+  earlier build stays readable for master data — *cost if wrong:* none for parties; stored orders and
+  trades from earlier builds still have the old counterparties, so `--reset-data` is still advised.

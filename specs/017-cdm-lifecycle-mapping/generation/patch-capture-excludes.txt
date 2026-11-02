@@ -42,3 +42,8 @@ package-lock.json
 # test output (Karma junit results from `ng test`): neither is state content.
 /ci/deployment-catalog.json
 /web-front-end/angular/.test-results/
+
+# API explorer contract copies: pipeline/install-generated-api-explorer.sh installs them from
+# specs/<state>/contracts/ on every generation, so they are not state overlay content.
+/api-explorer/contracts/
+/ingress/api-explorer/contracts/
