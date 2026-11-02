@@ -653,7 +653,7 @@ and records its failures like live events.
     ownership table in `generation/generation-hook.md` states which generated paths come from the patch
     and which from `runtime-overrides/`.
 
-## Decision log (R1–R73)
+## Decision log (R1–R74)
 
 Code comments, tests and documents in this state cite "Ruling Rnn". Each ruling is listed here: the
 decision, why it was taken, and its consequence. A few rulings were about the build process rather than
@@ -870,3 +870,10 @@ decision — why — the cost if it turns out wrong.
   The party master writes a new version with `account.servicingParty` — *why:* a volume from an
   earlier build stays readable for master data — *cost if wrong:* none for parties; stored orders and
   trades from earlier builds still have the old counterparties, so `--reset-data` is still advised.
+- **R74. The servicing subsidiary is shown on the Account tab, via account-service.** account-service's
+  `Account` gains optional `servicingPartyRef` and `servicingPartyName`, projected from the CDM party
+  (the name joined from the subsidiary's own party); the Account tab shows a **Serviced by** column, and
+  the CDM overview a selector and a trading-relationships table. Decided by the owner — *why:* the CDM
+  account model is authoritative in 017, so the trading relationship belongs on the account screen,
+  not only on order and trade pages — *cost if wrong:* two optional fields and one grid column to
+  remove; no 009 field changes.

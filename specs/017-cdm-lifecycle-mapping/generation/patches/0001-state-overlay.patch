@@ -32,7 +32,7 @@ index 61ad0e2..dd4895c 100644
    },
    "contracts": {
 diff --git a/account-service/openapi.yaml b/account-service/openapi.yaml
-index a9bff85..18c5d7a 100644
+index a9bff85..2705648 100644
 --- a/account-service/openapi.yaml
 +++ b/account-service/openapi.yaml
 @@ -10,18 +10,28 @@ paths:
@@ -103,7 +103,7 @@ index a9bff85..18c5d7a 100644
    /accountuser/{id}:
      get:
        operationId: getAccountUsersByAccountId
-@@ -71,5 +93,29 @@ paths:
+@@ -71,5 +93,38 @@ paths:
        responses:
          "200":
            description: OK
@@ -123,6 +123,15 @@ index a9bff85..18c5d7a 100644
 +        cdmRef:
 +          type: string
 +          description: Optional (state 017). Reference of the CDM Party, e.g. cdm:party:22214.
++        servicingPartyRef:
++          type: string
++          description: >
++            Optional (state 017). cdmRef of the TraderX subsidiary that services the account and
++            trades with it as dealer (the CDM Party's account.servicingParty), e.g.
++            cdm:party:traderx-nyc.
++        servicingPartyName:
++          type: string
++          description: Optional (state 017). Name of the servicing subsidiary, e.g. TraderX NYC.
 +    AccountUser:
 +      type: object
 +      properties:
@@ -371,18 +380,26 @@ index 0000000..8c60031
 +  }
 +}
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/model/Account.java b/account-service/src/main/java/finos/traderx/accountservice/model/Account.java
-index fde8c4d..fb1a410 100644
+index fde8c4d..b3b18f5 100644
 --- a/account-service/src/main/java/finos/traderx/accountservice/model/Account.java
 +++ b/account-service/src/main/java/finos/traderx/accountservice/model/Account.java
-@@ -3,6 +3,7 @@ package finos.traderx.accountservice.model;
+@@ -1,8 +1,15 @@
+ package finos.traderx.accountservice.model;
+ 
++import com.fasterxml.jackson.annotation.JsonInclude;
++
  public class Account {
    private Integer id;
    private String displayName;
 +  private String cdmRef;
++  @JsonInclude(JsonInclude.Include.NON_NULL)
++  private String servicingPartyRef;
++  @JsonInclude(JsonInclude.Include.NON_NULL)
++  private String servicingPartyName;
  
    public Integer getId() {
      return id;
-@@ -19,4 +20,13 @@ public class Account {
+@@ -19,4 +26,35 @@ public class Account {
    public void setDisplayName(String displayName) {
      this.displayName = displayName;
    }
@@ -394,6 +411,28 @@ index fde8c4d..fb1a410 100644
 +
 +  public void setCdmRef(String cdmRef) {
 +    this.cdmRef = cdmRef;
++  }
++
++  /**
++   * cdmRef of the TraderX subsidiary that services the account and trades with it as dealer
++   * (state 017: the CDM Party's {@code account.servicingParty}), e.g.
++   * {@code cdm:party:traderx-nyc}. Omitted when there is none.
++   */
++  public String getServicingPartyRef() {
++    return servicingPartyRef;
++  }
++
++  public void setServicingPartyRef(String servicingPartyRef) {
++    this.servicingPartyRef = servicingPartyRef;
++  }
++
++  /** Name of the servicing subsidiary (state 017), e.g. {@code TraderX NYC}. Omitted when there is none. */
++  public String getServicingPartyName() {
++    return servicingPartyName;
++  }
++
++  public void setServicingPartyName(String servicingPartyName) {
++    this.servicingPartyName = servicingPartyName;
 +  }
  }
 diff --git a/account-service/src/main/java/finos/traderx/accountservice/model/AccountUser.java b/account-service/src/main/java/finos/traderx/accountservice/model/AccountUser.java
@@ -702,10 +741,10 @@ index a00ff18..911ae56 100644
 +cdm.service.url=http://localhost:18120
 diff --git a/account-service/src/test/java/finos/traderx/accountservice/service/AccountServiceCdmTest.java b/account-service/src/test/java/finos/traderx/accountservice/service/AccountServiceCdmTest.java
 new file mode 100644
-index 0000000..710f0b6
+index 0000000..a388548
 --- /dev/null
 +++ b/account-service/src/test/java/finos/traderx/accountservice/service/AccountServiceCdmTest.java
-@@ -0,0 +1,268 @@
+@@ -0,0 +1,271 @@
 +package finos.traderx.accountservice.service;
 +
 +import static org.assertj.core.api.Assertions.assertThat;
@@ -802,13 +841,16 @@ index 0000000..710f0b6
 +  @Test
 +  void listAccountsReturnsProjectionWithCdmRef() throws Exception {
 +    respond("GET /projections/accounts", 200,
-+        "[{\"id\":22214,\"displayName\":\"Test Account 20\",\"cdmRef\":\"cdm:party:22214\"},"
++        "[{\"id\":22214,\"displayName\":\"Test Account 20\",\"cdmRef\":\"cdm:party:22214\","
++            + "\"servicingPartyRef\":\"cdm:party:traderx-nyc\",\"servicingPartyName\":\"TraderX NYC\"},"
 +            + "{\"id\":52355,\"displayName\":\"Big Corporate Fund\",\"cdmRef\":\"cdm:party:52355\"}]");
 +
++    // The servicing subsidiary passes through; an account without one keeps the 009 shape plus cdmRef.
 +    mvc().perform(get("/account/"))
 +        .andExpect(status().isOk())
 +        .andExpect(content().json(
-+            "[{\"id\":22214,\"displayName\":\"Test Account 20\",\"cdmRef\":\"cdm:party:22214\"},"
++            "[{\"id\":22214,\"displayName\":\"Test Account 20\",\"cdmRef\":\"cdm:party:22214\","
++                + "\"servicingPartyRef\":\"cdm:party:traderx-nyc\",\"servicingPartyName\":\"TraderX NYC\"},"
 +                + "{\"id\":52355,\"displayName\":\"Big Corporate Fund\","
 +                + "\"cdmRef\":\"cdm:party:52355\"}]", JsonCompareMode.STRICT));
 +  }
@@ -5913,6 +5955,65 @@ index 0000000..f8dcc21
 +    server.verify();
 +  }
 +}
+diff --git a/web-front-end/angular/main/app/accounts/account.component.spec.ts b/web-front-end/angular/main/app/accounts/account.component.spec.ts
+index 0924eab..b816056 100644
+--- a/web-front-end/angular/main/app/accounts/account.component.spec.ts
++++ b/web-front-end/angular/main/app/accounts/account.component.spec.ts
+@@ -1,7 +1,8 @@
+ import { ComponentFixture, TestBed, waitForAsync, tick, fakeAsync } from '@angular/core/testing';
+ import { AccountService } from 'main/app/service/account.service';
+ import { AccountComponent } from './account.component';
+-import { MockAccountService } from 'main/app/test-utils/mocks.service';
++import { MockAccountService, MockUserService } from 'main/app/test-utils/mocks.service';
++import { UserService } from 'main/app/service/user.service';
+ import { createAccount, sleep } from 'main/app/test-utils/utils';
+ import { AgGridModule } from 'ag-grid-angular';
+ import { ButtonCellRendererComponent } from './button-renderer.component';
+@@ -20,6 +21,10 @@ describe('Account tests', () => {
+           {
+             provide: AccountService,
+             useClass: MockAccountService
++          },
++          {
++            provide: UserService,
++            useClass: MockUserService
+           }
+         ],
+         schemas: [CUSTOM_ELEMENTS_SCHEMA]
+@@ -44,6 +49,14 @@ describe('Account tests', () => {
+     expect(comp.onGridReady).toHaveBeenCalled();
+   });
+ 
++  it('shows the servicing subsidiary of each account', () => {
++    const column = comp.columnDefs.find((c) => c.field === 'servicingPartyName');
++    expect(column?.headerName).toBe('Serviced by');
++    const format = column!.valueFormatter as (p: any) => string;
++    expect(format({ value: 'TraderX NYC' })).toBe('TraderX NYC');
++    expect(format({ value: undefined })).toBe('—');
++  });
++
+   it('should fetch accounts list on init', async () => {
+     spyOn((<any>comp).accountService, 'getAccounts').and.callThrough();
+     expect((<any>comp).accountService.getAccounts).not.toHaveBeenCalled();
+diff --git a/web-front-end/angular/main/app/accounts/account.component.ts b/web-front-end/angular/main/app/accounts/account.component.ts
+index ac05b78..926ff20 100644
+--- a/web-front-end/angular/main/app/accounts/account.component.ts
++++ b/web-front-end/angular/main/app/accounts/account.component.ts
+@@ -33,6 +33,14 @@ export class AccountComponent implements OnInit {
+             field: 'displayName',
+             flex: 2
+         },
++        {
++            headerName: 'Serviced by',
++            headerTooltip: 'TraderX subsidiary that services this client and trades with it as dealer (CDM account.servicingParty). Change it on the CDM tab.',
++            field: 'servicingPartyName',
++            valueFormatter: params => params.value ?? '—',
++            tooltipValueGetter: params => params.data?.servicingPartyRef ?? null,
++            flex: 2
++        },
+         {
+             headerName: 'Update',
+             cellRenderer: 'btnCellRenderer',
 diff --git a/web-front-end/angular/main/app/admin/order-admin.component.html b/web-front-end/angular/main/app/admin/order-admin.component.html
 index 8a7c840..b6cd834 100644
 --- a/web-front-end/angular/main/app/admin/order-admin.component.html
@@ -6189,10 +6290,10 @@ index 0000000..faf7cfd
 +.cdm-table { font-size: 0.8rem; }
 diff --git a/web-front-end/angular/main/app/cdm/cdm-home.component.html b/web-front-end/angular/main/app/cdm/cdm-home.component.html
 new file mode 100644
-index 0000000..1d90e6b
+index 0000000..9aae9f3
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-home.component.html
-@@ -0,0 +1,168 @@
+@@ -0,0 +1,206 @@
 +<div class="cdm-view-container p-4">
 +  <div class="d-flex flex-wrap align-items-center gap-3 mb-1">
 +    <h4 class="mb-0">CDM lifecycle</h4>
@@ -6205,6 +6306,19 @@ index 0000000..1d90e6b
 +      (selectedItemChange)="onAccountChange($event)">
 +    </app-ngx-dropdown>
 +    <code class="cdm-ref" *ngIf="account">cdm:party:{{ account.id }}</code>
++    <div class="d-flex align-items-center gap-2 cdm-home-servicing" *ngIf="account">
++      <label class="small text-muted mb-0" for="cdmHomeServicing"
++             title="TraderX subsidiary that services this client and trades with it as dealer (Party1): CDM Account.servicingParty">Serviced by</label>
++      <select id="cdmHomeServicing" class="form-select form-select-sm cdm-home-servicing-select"
++              [disabled]="servicingSaving || !entities.length"
++              (change)="changeServicingEntity($any($event.target).value)">
++        <option *ngIf="!servicingKey(account)" value="" selected>—</option>
++        <option *ngFor="let entity of entities" [value]="entity.externalKey"
++                [selected]="entity.externalKey === servicingKey(account)">{{ entity.name }}</option>
++      </select>
++      <small class="text-muted">applies to later orders and trades</small>
++      <small class="text-danger" *ngIf="servicingError">{{ servicingError }}</small>
++    </div>
 +  </div>
 +  <div class="text-muted small mb-3">
 +    FINOS CDM view of TraderX orders and trades held by cdm-service. Open a row to see its workflow lineage,
@@ -6359,14 +6473,39 @@ index 0000000..1d90e6b
 +    <ng-template #noRejections><div class="text-muted small">No rejected order requests for this account.</div></ng-template>
 +  </section>
 +
++  <section class="mt-4 cdm-relationships" *ngIf="entities.length">
++    <h6 class="cdm-section-title">Trading relationships</h6>
++    <div class="text-muted small mb-2">
++      Each client account is serviced by one TraderX subsidiary (CDM <code>Account.servicingParty</code>), which is the
++      dealer (<code>Party1</code>) of the client's orders and trades; the client is <code>Party2</code>.
++    </div>
++    <table class="table table-sm cdm-table">
++      <thead><tr><th>Subsidiary</th><th>cdmRef</th><th>Clients</th></tr></thead>
++      <tbody>
++        <tr *ngFor="let row of relationships()" [attr.data-entity]="row.key">
++          <td class="fw-semibold">{{ row.name }}</td>
++          <td><code class="cdm-ref" *ngIf="row.key">cdm:party:{{ row.key }}</code></td>
++          <td>
++            <span *ngFor="let client of row.accounts; let last = last">
++              <a href="" (click)="$event.preventDefault(); onAccountChange(client)"
++                 [class.fw-semibold]="client.id === account?.id">{{ client.displayName }}</a>
++              <span class="text-muted small"> ({{ client.id }})</span><span *ngIf="!last">, </span>
++            </span>
++            <span *ngIf="!row.accounts.length" class="text-muted small">none</span>
++          </td>
++        </tr>
++      </tbody>
++    </table>
++  </section>
++
 +  <ng-template #badgeLoading><span class="text-muted small">…</span></ng-template>
 +</div>
 diff --git a/web-front-end/angular/main/app/cdm/cdm-home.component.scss b/web-front-end/angular/main/app/cdm/cdm-home.component.scss
 new file mode 100644
-index 0000000..8a27084
+index 0000000..ad6daf3
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-home.component.scss
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,13 @@
 +@use 'cdm-common';
 +
 +.cdm-ref-plain { text-transform: none; letter-spacing: normal; }
@@ -6379,12 +6518,13 @@ index 0000000..8a27084
 +
 +.cdm-position-trades-row > td { background: #f8f9fa; }
 +.cdm-position-sum { font-size: 0.78rem; color: #495057; }
++.cdm-home-servicing-select { width: auto; min-width: 9rem; }
 diff --git a/web-front-end/angular/main/app/cdm/cdm-home.component.spec.ts b/web-front-end/angular/main/app/cdm/cdm-home.component.spec.ts
 new file mode 100644
-index 0000000..5929f99
+index 0000000..5c32e0c
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-home.component.spec.ts
-@@ -0,0 +1,161 @@
+@@ -0,0 +1,191 @@
 +import { NO_ERRORS_SCHEMA } from '@angular/core';
 +import { ComponentFixture, TestBed } from '@angular/core/testing';
 +import { ActivatedRoute, convertToParamMap, provideRouter, Router, RouterModule } from '@angular/router';
@@ -6434,7 +6574,11 @@ index 0000000..5929f99
 +    let cdm: jasmine.SpyObj<CdmService>;
 +
 +    beforeEach(async () => {
-+        cdm = jasmine.createSpyObj<CdmService>('CdmService', ['validationSummary', 'rejections', 'orderLineage', 'tradeLineage', 'positions']);
++        cdm = jasmine.createSpyObj<CdmService>('CdmService', ['validationSummary', 'rejections', 'orderLineage', 'tradeLineage', 'positions', 'entities', 'setServicingParty']);
++        cdm.entities.and.returnValue(of(['nyc', 'ldn', 'tky'].map((k) => ({
++            name: { value: `TraderX ${k.toUpperCase()}` }, meta: { externalKey: `traderx-${k}` }
++        }))));
++        cdm.setServicingParty.and.returnValue(of({}));
 +        cdm.validationSummary.and.returnValue(of({
 +            objects: { total: 0, byStatus: {}, byType: {} }, latest: { total: 0, byStatus: {} }, notValid: [],
 +            failures: { total: 0, recent: [] }, pending: { trades: 0, cancels: 0 }
@@ -6442,7 +6586,10 @@ index 0000000..5929f99
 +        cdm.rejections.and.returnValue(of({ count: 0, rejections: [] }));
 +        cdm.positions.and.returnValue(of<CdmResult<CdmPositions>>({ status: 'ok', data: positions() }));
 +        const accountService = jasmine.createSpyObj<AccountService>('AccountService', ['getAccounts']);
-+        accountService.getAccounts.and.returnValue(of([{ id: 22214, displayName: 'Test Account 20' }]));
++        accountService.getAccounts.and.returnValue(of([
++            { id: 22214, displayName: 'Test Account 20', servicingPartyRef: 'cdm:party:traderx-nyc', servicingPartyName: 'TraderX NYC' },
++            { id: 62654, displayName: 'Hedge Fund TXY1', servicingPartyRef: 'cdm:party:traderx-ldn', servicingPartyName: 'TraderX LDN' }
++        ]));
 +        const orderAdmin = jasmine.createSpyObj<OrderAdminService>('OrderAdminService', ['getOrders']);
 +        orderAdmin.getOrders.and.returnValue(of([]));
 +        const positionService = jasmine.createSpyObj<PositionService>('PositionService', ['getTrades']);
@@ -6473,6 +6620,29 @@ index 0000000..5929f99
 +    function text(el: Element | null): string {
 +        return (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
 +    }
++
++    it('showsTheSelectedAccountsServicingSubsidiaryAndSwitchesIt', () => {
++        const root = render();
++        const select = root.querySelector('.cdm-home-servicing-select') as HTMLSelectElement;
++        expect(select.options[select.selectedIndex].text.trim()).toBe('TraderX NYC');
++
++        select.value = 'traderx-tky';
++        select.dispatchEvent(new Event('change'));
++        fixture.detectChanges();
++
++        expect(cdm.setServicingParty).toHaveBeenCalledWith(22214, 'traderx-tky');
++        const tky = root.querySelector('.cdm-relationships tr[data-entity="traderx-tky"]');
++        expect(text(tky)).toContain('Test Account 20 (22214)');
++    });
++
++    it('listsTradingRelationshipsBySubsidiary', () => {
++        const root = render();
++        const rows = Array.from(root.querySelectorAll('.cdm-relationships tbody tr')) as HTMLElement[];
++        expect(rows.map((row) => text(row.querySelector('td')))).toEqual(['TraderX NYC', 'TraderX LDN', 'TraderX TKY']);
++        expect(text(rows[0])).toContain('Test Account 20 (22214)');
++        expect(text(rows[1])).toContain('Hedge Fund TXY1 (62654)');
++        expect(text(rows[2])).toContain('none');
++    });
 +
 +    it('positionsListTradeStatesSummingToQuantity', () => {
 +        const root = render();
@@ -6548,10 +6718,10 @@ index 0000000..5929f99
 +});
 diff --git a/web-front-end/angular/main/app/cdm/cdm-home.component.ts b/web-front-end/angular/main/app/cdm/cdm-home.component.ts
 new file mode 100644
-index 0000000..1571b91
+index 0000000..8d1dd2b
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-home.component.ts
-@@ -0,0 +1,228 @@
+@@ -0,0 +1,277 @@
 +import { Component, OnDestroy, OnInit } from '@angular/core';
 +import { ActivatedRoute, Router } from '@angular/router';
 +import { from, of, Subscription } from 'rxjs';
@@ -6563,7 +6733,7 @@ index 0000000..1571b91
 +import { OrderAdminService } from '../service/order-admin.service';
 +import { PositionService } from '../service/position.service';
 +import { CdmPosition, CdmPositions, CdmRejection, CdmService, CdmValidation, CdmValidationSummary } from './cdm.service';
-+import { badgeClass, cdmViewPath, formatPrice, formatQuantity, isoTimeOrNull, worstValidation } from './cdm-presentation';
++import { badgeClass, cdmViewPath, partyView, PartyView, formatPrice, formatQuantity, isoTimeOrNull, worstValidation } from './cdm-presentation';
 +
 +/** Validation badge of one row: the worst result over the row's stored CDM objects. */
 +export interface RowBadge {
@@ -6604,6 +6774,10 @@ index 0000000..1571b91
 +    orderBadges: { [orderId: string]: RowBadge } = {};
 +    tradeBadges: { [tradeId: string]: RowBadge } = {};
 +    loadingRows = false;
++    /** TraderX subsidiaries that can service a client (CDM parties), in seed order. */
++    entities: PartyView[] = [];
++    servicingSaving = false;
++    servicingError: string | null = null;
 +
 +    readonly badgeClass = badgeClass;
 +    readonly formatQuantity = formatQuantity;
@@ -6628,6 +6802,10 @@ index 0000000..1571b91
 +            next: (summary) => (this.summary = summary),
 +            error: () => (this.summaryError = true)
 +        }));
++        this.subs.push(this.cdm.entities().pipe(catchError(() => of([] as any[]))).subscribe((entities) => {
++            this.entities = (entities ?? []).map((entity) => partyView(entity))
++                .filter((entity): entity is PartyView => entity != null);
++        }));
 +        this.subs.push(this.accountService.getAccounts().subscribe((accounts) => {
 +            this.accounts = accounts ?? [];
 +            const requested = Number(this.route.snapshot.queryParamMap.get('accountId'));
@@ -6647,6 +6825,47 @@ index 0000000..1571b91
 +
 +    onAccountChange(account: Account): void {
 +        this.selectAccount(account, true);
++    }
++
++    /** Key of the subsidiary servicing an account (from its servicingPartyRef cdm:party:<key>). */
++    servicingKey(account: Account | undefined): string | null {
++        const ref = account?.servicingPartyRef;
++        return ref ? ref.replace(/^cdm:party:/, '') : null;
++    }
++
++    /** Each subsidiary with the clients it services (the trading relationships), then any unassigned accounts. */
++    relationships(): { key: string | null; name: string; accounts: Account[] }[] {
++        const rows = this.entities.map((entity) => ({
++            key: entity.externalKey,
++            name: entity.name ?? entity.externalKey ?? '-',
++            accounts: this.accounts.filter((account) => this.servicingKey(account) === entity.externalKey)
++        }));
++        const known = new Set(rows.map((row) => row.key));
++        const others = this.accounts.filter((account) => !known.has(this.servicingKey(account)));
++        return others.length ? [...rows, { key: null, name: 'Not assigned', accounts: others }] : rows;
++    }
++
++    /** Makes another subsidiary service the selected account; later orders and trades face it. */
++    changeServicingEntity(entity: string): void {
++        const account = this.account;
++        if (!account || !entity || entity === this.servicingKey(account)) {
++            return;
++        }
++        this.servicingSaving = true;
++        this.servicingError = null;
++        this.subs.push(this.cdm.setServicingParty(account.id, entity).subscribe({
++            next: () => {
++                const name = this.entities.find((e) => e.externalKey === entity)?.name ?? entity;
++                const updated: Account = { ...account, servicingPartyRef: `cdm:party:${entity}`, servicingPartyName: name };
++                this.accounts = this.accounts.map((a) => (a.id === account.id ? updated : a));
++                this.account = updated;
++                this.servicingSaving = false;
++            },
++            error: () => {
++                this.servicingError = 'Could not change the servicing subsidiary';
++                this.servicingSaving = false;
++            }
++        }));
 +    }
 +
 +    countOf(status: string): number {
@@ -7059,10 +7278,10 @@ index 0000000..f046ab0
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.html b/web-front-end/angular/main/app/cdm/cdm-view.component.html
 new file mode 100644
-index 0000000..4297058
+index 0000000..4ece29d
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.html
-@@ -0,0 +1,383 @@
+@@ -0,0 +1,386 @@
 +<div class="cdm-view-container p-4">
 +  <div class="d-flex flex-wrap align-items-baseline gap-3 mb-1">
 +    <a class="small" routerLink="/cdm">&larr; CDM overview</a>
@@ -7308,7 +7527,7 @@ index 0000000..4297058
 +                </div>
 +                <div class="cdm-kv"><span class="cdm-k">cdmRef</span><span class="cdm-v"><code>cdm:party:{{ accountId }}</code></span></div>
 +                <div class="cdm-kv cdm-servicing">
-+                  <span class="cdm-k">Serviced by</span>
++                  <span class="cdm-k" title="The account's current servicing subsidiary">Serviced by (now)</span>
 +                  <span class="cdm-v">
 +                    <select class="form-select form-select-sm cdm-servicing-select" aria-label="Subsidiary servicing this client"
 +                            [disabled]="servicingSaving || !entities.length"
@@ -7339,7 +7558,10 @@ index 0000000..4297058
 +                <div class="cdm-dealer">
 +                  <div class="cdm-card-title">{{ d.name || d.cdmRef }} <span class="badge text-bg-light">Party1 · dealer</span></div>
 +                  <div class="cdm-kv"><span class="cdm-k">cdmRef</span><span class="cdm-v"><code>{{ d.cdmRef }}</code></span></div>
-+                  <div class="small text-muted">TraderX subsidiary facing the client here (ExecutingEntity, BookingParty)</div>
++                  <div class="small text-muted">Dealer on this {{ tradePage ? 'trade' : 'order' }}: the TraderX subsidiary that faced the client when it was booked (ExecutingEntity, BookingParty)</div>
++                  <div class="small text-warning-emphasis cdm-dealer-changed" *ngIf="dealerChanged()">
++                    The client is now serviced by {{ entityName(accountParty?.servicingEntity ?? null) }}; this {{ tradePage ? 'trade' : 'order' }} keeps {{ d.name || d.cdmRef }}.
++                  </div>
 +                </div>
 +              </ng-container>
 +              <hr class="my-2" />
@@ -7589,10 +7811,10 @@ index 0000000..85b3156
 +}
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts b/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts
 new file mode 100644
-index 0000000..03a1ff0
+index 0000000..962c994
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.spec.ts
-@@ -0,0 +1,548 @@
+@@ -0,0 +1,557 @@
 +import { ComponentFixture, TestBed } from '@angular/core/testing';
 +import { ActivatedRoute, convertToParamMap, provideRouter, RouterModule } from '@angular/router';
 +import { BehaviorSubject, of } from 'rxjs';
@@ -7909,6 +8131,15 @@ index 0000000..03a1ff0
 +        fixture.detectChanges();
 +        expect(cdm.setServicingParty).toHaveBeenCalledWith(22214, 'traderx-ldn');
 +        expect(component.accountParty!.servicingEntity).toBe('traderx-ldn');
++        // the order keeps the dealer it was booked with, and says so
++        expect(text(root.querySelector('.cdm-dealer-changed'))).toContain('now serviced by TraderX LDN');
++    });
++
++    it('labelsTheCurrentServicerAndTheDealerOnThisOrder', () => {
++        const root = render();
++        expect(text(root.querySelector('.cdm-servicing .cdm-k'))).toBe('Serviced by (now)');
++        expect(text(root.querySelector('.cdm-dealer'))).toContain('Dealer on this order');
++        expect(root.querySelector('.cdm-dealer-changed')).toBeNull();
 +    });
 +
 +    it('showsApprovalBadge', () => {
@@ -8143,10 +8374,10 @@ index 0000000..03a1ff0
 +});
 diff --git a/web-front-end/angular/main/app/cdm/cdm-view.component.ts b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
 new file mode 100644
-index 0000000..cb28210
+index 0000000..292e911
 --- /dev/null
 +++ b/web-front-end/angular/main/app/cdm/cdm-view.component.ts
-@@ -0,0 +1,655 @@
+@@ -0,0 +1,662 @@
 +import { Component, OnDestroy, OnInit } from '@angular/core';
 +import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
 +import { HttpErrorResponse } from '@angular/common/http';
@@ -8775,7 +9006,14 @@ index 0000000..cb28210
 +    }
 +
 +    /** Name of the subsidiary with this key, or the key. */
-+    entityName(key: string | null): string {
++    /** True when the account's current servicing subsidiary is not the dealer recorded on this order or trade. */
++    dealerChanged(): boolean {
++        const current = this.accountParty?.servicingEntity;
++        const recorded = this.dealer?.cdmRef?.replace(/^cdm:party:/, '');
++        return !!current && !!recorded && current !== recorded;
++    }
++
++        entityName(key: string | null): string {
 +        return this.entities.find((entity) => entity.externalKey === key)?.name ?? key ?? '-';
 +    }
 +
@@ -9276,6 +9514,21 @@ index f488f08..60a0b61 100644
 +        <a class="nav-link" routerLink="/cdm" routerLinkActive="active">CDM</a>
 +    </li>
  </ul>
+diff --git a/web-front-end/angular/main/app/model/account.model.ts b/web-front-end/angular/main/app/model/account.model.ts
+index 1198026..71f8d1c 100644
+--- a/web-front-end/angular/main/app/model/account.model.ts
++++ b/web-front-end/angular/main/app/model/account.model.ts
+@@ -1,4 +1,10 @@
+ export interface Account {
+     id: number;
+     displayName: string;
++    /** Reference of the CDM Party this account projects (state 017), e.g. cdm:party:22214. */
++    cdmRef?: string;
++    /** cdmRef of the TraderX subsidiary servicing the account (state 017: CDM account.servicingParty). */
++    servicingPartyRef?: string;
++    /** Name of that subsidiary, e.g. TraderX NYC: the dealer the client trades with. */
++    servicingPartyName?: string;
+ }
 diff --git a/web-front-end/angular/main/app/model/order.model.ts b/web-front-end/angular/main/app/model/order.model.ts
 index a2d96f0..b9ad540 100644
 --- a/web-front-end/angular/main/app/model/order.model.ts

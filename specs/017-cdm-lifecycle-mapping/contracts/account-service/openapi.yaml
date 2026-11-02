@@ -109,6 +109,15 @@ components:
         cdmRef:
           type: string
           description: Optional (state 017). Reference of the CDM Party, e.g. cdm:party:22214.
+        servicingPartyRef:
+          type: string
+          description: >
+            Optional (state 017). cdmRef of the TraderX subsidiary that services the account and
+            trades with it as dealer (the CDM Party's account.servicingParty), e.g.
+            cdm:party:traderx-nyc.
+        servicingPartyName:
+          type: string
+          description: Optional (state 017). Name of the servicing subsidiary, e.g. TraderX NYC.
     AccountUser:
       type: object
       properties:

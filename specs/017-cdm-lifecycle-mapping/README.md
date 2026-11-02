@@ -25,7 +25,9 @@ docs site as the state 017 learning guide.
   their 009 shapes, served as projections.
 - **A dealer trading with its clients.** Each TraderX account is a client. One of three TraderX
   group subsidiaries (NYC, LDN, TKY) services it and is the dealer, `Party1`, of its orders and
-  trades; the client is `Party2`. The matcher is the execution venue, not a counterparty.
+  trades; the client is `Party2`. The matcher is the execution venue, not a counterparty. The Account
+  tab shows each client's subsidiary, and the CDM tab lists the trading relationships and lets you
+  switch them.
 - **Every order and trade event becomes CDM, before and after the trade.** An order is a CDM
   proposal that the venue approves (`WorkflowStepApproval`), or rejects, and that a cancel corrects
   with status `Cancelled`. Each fill is its own child instruction: a proposed step, then an accepted
@@ -63,7 +65,14 @@ With state 017, the same screen gains a **CDM** link on every trade and a **CDM*
 
 ![TraderX 017 trade screen](screenshots/cdm-1-trade.png)
 
-The **CDM** tab: every order, trade, rejection and position held as validated CDM 7.8.0 objects.
+The **Account** tab shows the TraderX subsidiary that services each client, read from the CDM
+account model:
+
+![Account tab with servicing subsidiary](screenshots/cdm-2-account.png)
+
+The **CDM** tab: every order, trade, rejection and position held as validated CDM 7.8.0 objects. The
+servicing subsidiary of the selected account can be switched next to the account selector, and the
+trading relationships are listed at the bottom.
 
 ![CDM overview](screenshots/cdm-3-cdm-overview.png)
 
@@ -139,7 +148,7 @@ Start here:
   JSON, translation rules, semantic gaps, projection losses and the phased adoption path.
 - [`contracts/contract-delta.md`](contracts/contract-delta.md): REST, NATS, schema and UI changes.
 - [`tests/smoke/README.md`](tests/smoke/README.md): what the scenario tests prove.
-- [`research.md`, "Decision log"](research.md#decision-log-r1r73): every "Ruling Rnn" cited in the
+- [`research.md`, "Decision log"](research.md#decision-log-r1r74): every "Ruling Rnn" cited in the
   code and documents, with its reason and consequence.
 
 Core artifacts:

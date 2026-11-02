@@ -38,6 +38,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class PartyMasterTest {
 
+  private static final String NYC_REF = "cdm:party:traderx-nyc";
+
   private static final int SEED_PERSONS = 10;
 
   @Autowired
@@ -90,8 +92,8 @@ class PartyMasterTest {
 
     assertThat(master.isReady()).isTrue();
     assertThat(master.accounts()).containsExactly(
-        new AccountProjection(22214, "Test Account 20", "cdm:party:22214"),
-        new AccountProjection(52355, "Big Corporate Fund", "cdm:party:52355"));
+        new AccountProjection(22214, "Test Account 20", "cdm:party:22214", NYC_REF, "TraderX NYC"),
+        new AccountProjection(52355, "Big Corporate Fund", "cdm:party:52355", NYC_REF, "TraderX NYC"));
     assertThat(master.relatedPersons(22214)).containsExactly("user01", "user03");
     assertThat(master.relatedPersons(52355)).containsExactly("user09");
     assertThat(master.accountUsers(null)).containsExactly(
@@ -141,7 +143,7 @@ class PartyMasterTest {
 
     assertThat(repository.count()).isEqualTo(rows);
     assertThat(restarted.findAccount(22214))
-        .contains(new AccountProjection(22214, "Renamed In CDM", "cdm:party:22214"));
+        .contains(new AccountProjection(22214, "Renamed In CDM", "cdm:party:22214", NYC_REF, "TraderX NYC"));
     // The rename kept the related persons.
     assertThat(restarted.relatedPersons(22214)).containsExactly("user01", "user03");
   }
@@ -177,7 +179,7 @@ class PartyMasterTest {
     assertThat(history).hasSize(2);
     assertThat(history.get(1).previousGlobalKey()).isEqualTo(before);
     assertThat(master.findAccount(52355))
-        .contains(new AccountProjection(52355, "Bigger Corporate Fund", "cdm:party:52355"));
+        .contains(new AccountProjection(52355, "Bigger Corporate Fund", "cdm:party:52355", NYC_REF, "TraderX NYC"));
   }
 
   @Test
@@ -186,7 +188,7 @@ class PartyMasterTest {
 
     AccountProjection upserted = master.updateAccount(777, "Client Supplied Id");
 
-    assertThat(upserted).isEqualTo(new AccountProjection(777, "Client Supplied Id", "cdm:party:777"));
+    assertThat(upserted).isEqualTo(new AccountProjection(777, "Client Supplied Id", "cdm:party:777", NYC_REF, "TraderX NYC"));
     assertThat(master.accounts()).first().isEqualTo(upserted);
   }
 
@@ -347,7 +349,7 @@ class PartyMasterTest {
 
     assertThat(created.id()).isNotEqualTo(next);
     assertThat(master.findAccount(next))
-        .contains(new AccountProjection(next, "Client Supplied", "cdm:party:" + next));
+        .contains(new AccountProjection(next, "Client Supplied", "cdm:party:" + next, NYC_REF, "TraderX NYC"));
     assertThat(master.relatedPersons(next)).containsExactly("user01");
     assertThat(store.history(PartyMapper.partyRef(next))).hasSize(2);
   }
@@ -477,7 +479,11 @@ class PartyMasterTest {
   void servicingEntityCanBeSwitchedAndUnknownOnesAreRejected() {
     PartyMaster master = seeded();
 
-    master.setServicingEntity(22214, "traderx-ldn");
+    assertThat(master.setServicingEntity(22214, "traderx-ldn"))
+        .isEqualTo(new AccountProjection(22214, "Test Account 20", "cdm:party:22214",
+            "cdm:party:traderx-ldn", "TraderX LDN"));
+    assertThat(master.findAccount(22214)).get().extracting(AccountProjection::servicingPartyName)
+        .isEqualTo("TraderX LDN");
 
     assertThat(master.facingEntity(22214).getMeta().getExternalKey()).isEqualTo("traderx-ldn");
     Party stored = readParty("22214");

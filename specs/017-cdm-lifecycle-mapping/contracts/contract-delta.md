@@ -75,7 +75,7 @@ key, see `cdm-mapping.md` section 8.2).
 | Method and path | Answer |
 |---|---|
 | `GET /projections/stocks`, `GET /projections/stocks/{ticker}` | `StockProjection {ticker, companyName, cdmRef}`; 404 unknown; 503 until the security master is seeded. |
-| `GET /projections/accounts`, `GET /projections/accounts/{id}` | `AccountProjection {id, displayName, cdmRef}`; 404 unknown. |
+| `GET /projections/accounts`, `GET /projections/accounts/{id}` | `AccountProjection {id, displayName, cdmRef, servicingPartyRef, servicingPartyName}`: the last two are the TraderX subsidiary servicing the account (its `account.servicingParty`, e.g. `cdm:party:traderx-nyc`, "TraderX NYC"; the name joined from that subsidiary's party). 404 unknown. |
 | `POST /projections/accounts` | Body `{id?, displayName}`. No id (or id ≤ 0): new id from `accounts_seq`, never overwriting a taken id (409 after 20 taken ids in a row). With an id: upsert. 400 when `displayName` is over 50 characters. |
 | `PUT /projections/accounts/{id}` | Body `{displayName}`; upsert. |
 | `GET /projections/accountusers[?accountId=]` | `AccountUserProjection {accountId, username, cdmRef}`. |
@@ -103,7 +103,7 @@ it.
 
 | Service | Path(s) | Change |
 |---|---|---|
-| account-service | `GET/POST/PUT /account/`, `GET /account/{id}`, `GET/POST/PUT /accountuser/`, `GET /accountuser/{id}` | Served from cdm-service (`/projections/accounts`, `/projections/accountusers`). `Account` and `AccountUser` gain optional `cdmRef`. New error answers: 400 (cdm-service rejected the input, e.g. `displayName` over 50 or `username` over 15 characters), 409 (account id conflict), 503 (cdm-service down or not ready). 009's 404 bodies are unchanged. |
+| account-service | `GET/POST/PUT /account/`, `GET /account/{id}`, `GET/POST/PUT /accountuser/`, `GET /accountuser/{id}` | Served from cdm-service (`/projections/accounts`, `/projections/accountusers`). `Account` and `AccountUser` gain optional `cdmRef`; `Account` also gains optional `servicingPartyRef` and `servicingPartyName` (the subsidiary that services the client and trades with it as dealer), omitted when absent. New error answers: 400 (cdm-service rejected the input, e.g. `displayName` over 50 or `username` over 15 characters), 409 (account id conflict), 503 (cdm-service down or not ready). 009's 404 bodies are unchanged. |
 | people-service | `GET /People/GetPerson`, `GET /People/GetMatchingPeople`, `GET /People/ValidatePerson` | Served from cdm-service (`/projections/people`). `Person` gains optional `cdmRef`. New 503 when cdm-service is unreachable, not ready or answers garbage. Identifier-only persons are 404, as unknown persons were in 009. |
 | reference-data | `GET /stocks`, `GET /stocks/{ticker}` | Served from cdm-service (`/projections/stocks`). `Stock` gains optional `cdmRef`. New 503 when cdm-service is unavailable. Supported-ticker and max-ticker filters unchanged. |
 | position-service | `GET /positions/{accountId}`, `GET /positions/` | `Position` gains optional, derived `cdmRef` (`cdm:position:<accountId>:<security>`; absent when either part is null). `Trade` rows (`GET /trades/{accountId}`, `GET /trades/`) gain optional, derived `cdmRef` (`cdm:trade:<id>`; absent when the id is null). |
@@ -178,6 +178,14 @@ First-build data is not migrated (Ruling R57).
   "Direct trade" with its two steps). Party and security cards, execution type with its meaning, and
   raw CDM JSON on both. New **CDM** header tab, and a **CDM** link per row in the order and trade
   blotters.
+- Servicing subsidiary (dealer) of each client, from the CDM account model:
+  - **Account** tab: the account list gains a **Serviced by** column (`servicingPartyName`).
+  - `/cdm` overview: a **Serviced by** selector next to the account selector (calls
+    `PUT /cdm/parties/{accountId}/servicing-party`; applies to later orders and trades), and a
+    **Trading relationships** table listing each subsidiary with the clients it services.
+  - Lineage pages: the client's card shows **Serviced by (now)** with the same selector; the dealer
+    block reads "Dealer on this order/trade" and, when the account has since been switched, says the
+    order or trade keeps the subsidiary it was booked with.
 - The base href changed from `.` to `/` (`index.html` and the `--base-href` of the `package.json`
   build and start scripts), so assets load on deep routes such as `/cdm/order/<id>`. The app is served
   from the ingress root, as before.

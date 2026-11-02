@@ -307,11 +307,11 @@ public class PartyMaster implements CdmMaster {
 
   /** Every account, ordered by id (as account-service always listed them). */
   public List<AccountProjection> accounts() {
-    return ready().accounts().values().stream().map(PartyMapper::toAccountProjection).toList();
+    return ready().accounts().values().stream().map(this::projection).toList();
   }
 
   public Optional<AccountProjection> findAccount(int id) {
-    return Optional.ofNullable(ready().accounts().get(id)).map(PartyMapper::toAccountProjection);
+    return Optional.ofNullable(ready().accounts().get(id)).map(this::projection);
   }
 
   /** Account users ordered by account id then username; only one account's if given. */
@@ -402,6 +402,11 @@ public class PartyMaster implements CdmMaster {
     return entitySeed.entities().stream().map(PartyMapper::entityParty).toList();
   }
 
+  private AccountProjection projection(Party party) {
+    return PartyMapper.toAccountProjection(party,
+        key -> entity(key).map(e -> e.getName() == null ? null : e.getName().getValue()));
+  }
+
   /** The subsidiary party with this key (stored by the seed; the mapped constant before that). */
   public Optional<Party> entity(String key) {
     if (key == null || !entitySeed.isEntity(key)) {
@@ -452,9 +457,9 @@ public class PartyMaster implements CdmMaster {
       Party party = PartyMapper.withServicingEntity(existing, entityKey);
       write(PartyMapper.partyRef(accountId), party);
       index = current.withAccount(accountId, party);
-      return PartyMapper.toAccountProjection(party);
+      return projection(party);
     }
-    return PartyMapper.toAccountProjection(existing);
+    return projection(existing);
   }
 
   /** The venue party (stored by the seed; the mapped constant before that). */
@@ -517,7 +522,7 @@ public class PartyMaster implements CdmMaster {
         throw e;
       }
       index = current.withAccount(id, party);
-      return PartyMapper.toAccountProjection(party);
+      return projection(party);
     }
     throw new AccountIdConflictException("No free account id after " + MAX_ID_DRAWS
         + " values of accounts_seq");
@@ -548,7 +553,7 @@ public class PartyMaster implements CdmMaster {
       throw e;
     }
     index = current.withAccount(id, party);
-    return PartyMapper.toAccountProjection(party);
+    return projection(party);
   }
 
   /**

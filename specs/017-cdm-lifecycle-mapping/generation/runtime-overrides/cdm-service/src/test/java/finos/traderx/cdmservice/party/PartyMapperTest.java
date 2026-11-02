@@ -22,11 +22,21 @@ class PartyMapperTest {
     // Through the CDM JSON form too, since that is what the store keeps.
     Party reread = cdmObjectMapper.readValue(cdmObjectMapper.writeValueAsString(party), Party.class);
 
-    assertThat(PartyMapper.toAccountProjection(reread))
-        .isEqualTo(new AccountProjection(22214, "Test Account 20", "cdm:party:22214"));
+    assertThat(PartyMapper.toAccountProjection(reread, key -> java.util.Optional.empty()))
+        .isEqualTo(new AccountProjection(22214, "Test Account 20", "cdm:party:22214", null, null));
     assertThat(reread).isEqualTo(party);
-    assertThat(PartyMapper.toAccountProjection(PartyMapper.toCdmParty(7, null)))
-        .isEqualTo(new AccountProjection(7, null, "cdm:party:7"));
+    assertThat(PartyMapper.toAccountProjection(PartyMapper.toCdmParty(7, null), key -> java.util.Optional.empty()))
+        .isEqualTo(new AccountProjection(7, null, "cdm:party:7", null, null));
+  }
+
+  @Test
+  void accountProjectionCarriesTheServicingSubsidiary() {
+    Party party = PartyMapper.toCdmParty(62654, "Hedge Fund TXY1", java.util.List.of(), "traderx-ldn");
+
+    assertThat(PartyMapper.toAccountProjection(party,
+            key -> key.equals("traderx-ldn") ? java.util.Optional.of("TraderX LDN") : java.util.Optional.empty()))
+        .isEqualTo(new AccountProjection(62654, "Hedge Fund TXY1", "cdm:party:62654",
+            "cdm:party:traderx-ldn", "TraderX LDN"));
   }
 
   @Test

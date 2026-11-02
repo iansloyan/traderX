@@ -636,6 +636,12 @@ components:
         id: { type: integer }
         displayName: { type: string }
         cdmRef: { type: string, example: "cdm:party:22214" }
+        servicingPartyRef:
+          type: string
+          nullable: true
+          example: "cdm:party:traderx-nyc"
+          description: The TraderX subsidiary servicing the account (CDM account.servicingParty)
+        servicingPartyName: { type: string, nullable: true, example: "TraderX NYC" }
     AccountUserProjection:
       type: object
       properties:

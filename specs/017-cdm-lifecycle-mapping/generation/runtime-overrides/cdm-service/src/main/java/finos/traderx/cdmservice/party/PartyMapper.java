@@ -233,10 +233,18 @@ public final class PartyMapper {
     return fullName(person) != null && email(person) != null && employeeId(person) != null;
   }
 
-  public static AccountProjection toAccountProjection(Party party) {
+  /**
+   * The account projection of an account party; {@code entityName} gives the name of its
+   * servicing subsidiary by external key (empty if unknown).
+   */
+  public static AccountProjection toAccountProjection(Party party,
+      java.util.function.Function<String, Optional<String>> entityName) {
     int id = accountId(party);
     String name = party.getName() == null ? null : party.getName().getValue();
-    return new AccountProjection(id, name, partyRef(id).toString());
+    String servicing = servicingEntity(party).orElse(null);
+    return new AccountProjection(id, name, partyRef(id).toString(),
+        servicing == null ? null : entityRef(servicing).toString(),
+        servicing == null ? null : entityName.apply(servicing).orElse(servicing));
   }
 
   /** One projection per related person, sorted by username. */

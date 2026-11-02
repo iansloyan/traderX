@@ -14,8 +14,8 @@ set -euo pipefail
 #   (e) round trips             account, person, stock, trade, position (trades sum to quantity)
 #   (g) cdm-service outage      order placed, filled twice and cancelled while cdm-service misses it;
 #       the startup backfill rebuilds the same lineage shape and fill numbers (needs docker)
-#   (h) facing subsidiaries     three TraderX subsidiaries; switching an account's servicing party
-#                               changes the dealer (Party1) of its later trades only
+#   (h) facing subsidiaries     three TraderX subsidiaries; account-service shows each account's;
+#                               switching it changes the dealer (Party1) of later trades only
 #   (f) validation              nothing INVALID or NOT_QUALIFIED, no BusinessEvent rows, no failure rows
 #
 # Prerequisites: bash, curl, jq, and a running 017 stack
@@ -693,9 +693,15 @@ scenario_e() {
   if get_original "account-service returns account ${ACCOUNT_ID}" \
     "${INGRESS_URL}/account-service/account/${ACCOUNT_ID}" '.'; then
     ref="$(jq_out "${ORIGINAL}" '.cdmRef // empty' -r)"
+    # The servicing subsidiary is a reference on the party (account.servicingParty); its name is
+    # joined from that subsidiary's own CDM Party.
+    local servicing_name
+    servicing_name="$(curl -sS "${CDM}/cdm/parties/$(facing_entity "${ACCOUNT_ID}")" | jq -c '.name.value')"
     roundtrip "account ${ACCOUNT_ID}" "${ORIGINAL}" "${ref:-cdm:party:${ACCOUNT_ID}}" \
       '{id: (.partyId[] | select(.identifier.meta.scheme == "https://traderx.finos.org/account-id") | .identifier.value | tonumber),
-        displayName: .name.value, cdmRef: $ref}' \
+        displayName: .name.value, cdmRef: $ref,
+        servicingPartyRef: ("cdm:party:" + .account.servicingParty.externalReference),
+        servicingPartyName: '"${servicing_name:-null}"'}' \
       "${CDM}/projections/accounts/${ACCOUNT_ID}"
   fi
 
@@ -1037,6 +1043,10 @@ scenario_h() {
      and (.account.servicingParty.externalReference | startswith("traderx-"))' --argjson a "${ACCOUNT_ID}" || return
   local original target
   original="$(facing_entity "${ACCOUNT_ID}")"
+  expect "(h) account-service shows the account's servicing subsidiary (Account tab)" \
+    "${INGRESS_URL}/account-service/account/${ACCOUNT_ID}" \
+    '.servicingPartyRef == ("cdm:party:" + $e) and (.servicingPartyName | startswith("TraderX "))' \
+    --arg e "${original}"
   target="traderx-tky"
   [[ "${original}" == "${target}" ]] && target="traderx-ldn"
   fetch PUT "${CDM}/cdm/parties/${ACCOUNT_ID}/servicing-party" "$(jq -n -c --arg e "${target}" '{entity: $e}')"
@@ -1046,6 +1056,8 @@ scenario_h() {
     fail "(h) servicing party switch" "HTTP ${STATUS}: $(head -c 300 <<<"${BODY}")"
     return
   fi
+  expect "(h) account-service reflects the switch" "${INGRESS_URL}/account-service/account/${ACCOUNT_ID}" \
+    '.servicingPartyRef == ("cdm:party:" + $e)' --arg e "${target}"
   fetch PUT "${CDM}/cdm/parties/${ACCOUNT_ID}/servicing-party" '{"entity":"traderx-par"}'
   if [[ "${STATUS}" == "400" ]]; then
     pass "(h) an unknown subsidiary is rejected with 400"

@@ -58,11 +58,12 @@ in `scripts/test-state-017-cdm-lifecycle-mapping.sh` (see `tests/smoke/README.md
   `.servicingEntityCanBeSwitchedAndUnknownOnesAreRejected`,
   `WorkflowMapperTest.proposedStepIsDealerAgainstClientWithVenueAsFacility`, scenario (h).
 - FR-01704: account-service SHALL serve accounts and account users as projections of the CDM parties,
-  and account creation, update and add-user SHALL go through cdm-service, keeping 009's id semantics
+  each account with the subsidiary servicing it (`servicingPartyRef`, `servicingPartyName`), and
+  account creation, update and add-user SHALL go through cdm-service, keeping 009's id semantics
   (sequence ids, upsert with a client id, never overwriting a taken id). Tests:
   `AccountServiceCdmTest.listAccountsReturnsProjectionWithCdmRef`, `.createAccountGoesThroughCdmService`,
   `.updateWithAnIdUpsertsThatAccountInCdm`, `.addAccountUserValidatesThePersonThenWritesToCdm`,
-  `.getAccountByIdKeepsThe404`, `PartyMasterTest.createAccountDrawsIdsFromAccountsSequenceAndSurvivesRestart`,
+  `.getAccountByIdKeepsThe404`, `PartyMapperTest.accountProjectionCarriesTheServicingSubsidiary`, `PartyMasterTest.createAccountDrawsIdsFromAccountsSequenceAndSurvivesRestart`,
   `.createAccountNeverOverwritesExistingId`, `.createAccountAnswersConflictWhenEveryDrawnIdIsTaken`.
 - FR-01705: people-service SHALL serve its directory from the CDM person master; identifier-only
   persons SHALL NOT be in the directory (Ruling R20). Tests: `PeopleControllerTests.GetPerson_ReturnsCdmRef`,
@@ -211,7 +212,9 @@ in `scripts/test-state-017-cdm-lifecycle-mapping.sh` (see `tests/smoke/README.md
   trade states, the cancel), the trade page leading with its trade state and what produced it, the
   account's positions with the trade states behind each, the execution type with its meaning, party
   and security cards, validation badges, a pending state and the raw CDM JSON, and a CDM link per order
-  and trade blotter row. Tests: `cdm-view.component.spec.ts` `rendersOrderAsTreeWithFillsNested`,
+  and trade blotter row. Each client's servicing subsidiary SHALL be visible and changeable without
+  opening an order or trade: a **Serviced by** column on the Account tab, and on the CDM overview a
+  selector and a table of trading relationships (Ruling R74). Tests: `cdm-view.component.spec.ts` `rendersOrderAsTreeWithFillsNested`, `labelsTheCurrentServicerAndTheDealerOnThisOrder`, `cdm-home.component.spec.ts` `showsTheSelectedAccountsServicingSubsidiaryAndSwitchesIt`, `listsTradingRelationshipsBySubsidiary`, `account.component.spec.ts` `shows the servicing subsidiary of each account`,
   `showsApprovalBadge`, `showsRejectionReasonInTheApprovalBadge`, `executionTypeCaptionShown`,
   `highlights the fill named in the query`, `tradePageLeadsWithTradeState`, `tradePageLinksProducingFill`,
   `directTradeShowsDirectWorkflow`, `showsInvalidBadgeWhenValidationInvalid`,

@@ -51,11 +51,14 @@ class PartyEndpointsTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(22214))
         .andExpect(jsonPath("$[0].displayName").value("Test Account 20"))
-        .andExpect(jsonPath("$[0].cdmRef").value("cdm:party:22214"));
+        .andExpect(jsonPath("$[0].cdmRef").value("cdm:party:22214"))
+        .andExpect(jsonPath("$[0].servicingPartyRef").value("cdm:party:traderx-nyc"))
+        .andExpect(jsonPath("$[0].servicingPartyName").value("TraderX NYC"));
     mockMvc.perform(get("/projections/accounts/52355"))
         .andExpect(status().isOk())
         .andExpect(content().json("{\"id\":52355,\"displayName\":\"Big Corporate Fund\","
-            + "\"cdmRef\":\"cdm:party:52355\"}", JsonCompareMode.STRICT));
+            + "\"cdmRef\":\"cdm:party:52355\",\"servicingPartyRef\":\"cdm:party:traderx-nyc\","
+            + "\"servicingPartyName\":\"TraderX NYC\"}", JsonCompareMode.STRICT));
     mockMvc.perform(get("/projections/accounts/1")).andExpect(status().isNotFound());
   }
 
@@ -73,7 +76,8 @@ class PartyEndpointsTest {
             .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"Renamed Fund\"}"))
         .andExpect(status().isOk())
         .andExpect(content().json("{\"id\":" + id + ",\"displayName\":\"Renamed Fund\","
-            + "\"cdmRef\":\"cdm:party:" + id + "\"}", JsonCompareMode.STRICT));
+            + "\"cdmRef\":\"cdm:party:" + id + "\",\"servicingPartyRef\":\"cdm:party:traderx-nyc\","
+            + "\"servicingPartyName\":\"TraderX NYC\"}", JsonCompareMode.STRICT));
     mockMvc.perform(get("/projections/accounts/" + id))
         .andExpect(jsonPath("$.displayName").value("Renamed Fund"));
 
